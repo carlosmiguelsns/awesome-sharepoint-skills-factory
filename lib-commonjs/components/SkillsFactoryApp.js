@@ -192,6 +192,6 @@ function SkillsFactoryApp(props) {
                             return [2 /*return*/];
                     }
                 });
-            }); } })) : (React.createElement(SkillsFactoryDashboard_1.default, { currentUserName: props.currentUserName, activeTab: activeTab, onTabChange: setActiveTab, searchText: searchText, onSearchTextChange: setSearchText, siteSearchText: siteSearchText, onSiteSearchTextChange: setSiteSearchText, mySkills: filteredMySkills, allSkills: filteredAllSkills, usageSkills: skills, siteCollections: siteCollections, sites: sites, selectedSkill: selectedSkill, onSelectSkill: setSelectedSkillId, onSelectSite: function (_) { return undefined; }, onCollapseToInline: handleCollapse })))));
+            }); } })) : (React.createElement(SkillsFactoryDashboard_1.default, { hostContext: props.hostContext, targetDocument: props.targetDocument, inputQuery: props.inputQuery, currentUserName: props.currentUserName, activeTab: activeTab, onTabChange: setActiveTab, searchText: searchText, onSearchTextChange: setSearchText, siteSearchText: siteSearchText, onSiteSearchTextChange: setSiteSearchText, mySkills: filteredMySkills, allSkills: filteredAllSkills, usageSkills: skills, siteCollections: siteCollections, sites: sites, selectedSkill: selectedSkill, onSelectSkill: setSelectedSkillId, onSelectSite: function (_) { return undefined; }, onRequestFullscreen: props.onRequestFullscreen })))));
 }
 //# sourceMappingURL=SkillsFactoryApp.js.map

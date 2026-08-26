@@ -1,7 +1,6 @@
 import * as React from 'react';
 
-import { Body1, Button, Card, Link, Text, makeStyles, tokens } from '@fluentui/react-components';
-import { ArrowExpandAll24Regular } from '@fluentui/react-icons';
+import { Body1, Card, Link, Text, makeStyles, tokens } from '@fluentui/react-components';
 
 import type { SharePointSite, SiteCollection, Skill } from '../../models';
 import InlineSkillsList from './InlineSkillsList';
@@ -50,7 +49,6 @@ export interface IInlineSkillsViewProps {
   sites: SharePointSite[];
   siteCollections: SiteCollection[];
   onSelectSkill: (skillId: string) => void;
-  onExpand: () => void;
 }
 
 export default function InlineSkillsView(props: IInlineSkillsViewProps): React.ReactElement {
@@ -67,9 +65,6 @@ export default function InlineSkillsView(props: IInlineSkillsViewProps): React.R
               : 'A compact view of your top 5 skills used.'}
           </Body1>
         </div>
-        <Button appearance="secondary" icon={<ArrowExpandAll24Regular />} onClick={props.onExpand}>
-          Open full screen
-        </Button>
       </div>
 
       {props.mode === 'skill-usage' ? (
@@ -90,7 +85,7 @@ export default function InlineSkillsView(props: IInlineSkillsViewProps): React.R
           <Body1 className={styles.emptyState}>No sites found for this skill.</Body1>
         )
       ) : (
-        <InlineSkillsList skills={props.skills} onSelectSkill={props.onSelectSkill} onExpand={props.onExpand} />
+        <InlineSkillsList skills={props.skills} onSelectSkill={props.onSelectSkill} />
       )}
     </div>
   );

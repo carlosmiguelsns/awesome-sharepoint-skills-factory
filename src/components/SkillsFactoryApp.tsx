@@ -260,6 +260,9 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
           />
         ) : (
           <SkillsFactoryDashboard
+            hostContext={props.hostContext}
+            targetDocument={props.targetDocument}
+            inputQuery={props.inputQuery}
             currentUserName={props.currentUserName}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -275,7 +278,7 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             selectedSkill={selectedSkill}
             onSelectSkill={setSelectedSkillId}
             onSelectSite={(_: string) => undefined}
-            onCollapseToInline={handleCollapse}
+            onRequestFullscreen={props.onRequestFullscreen}
           />
         )}
       </FluentProvider>

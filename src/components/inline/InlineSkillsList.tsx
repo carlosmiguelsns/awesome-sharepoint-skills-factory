@@ -43,7 +43,6 @@ const useStyles = makeStyles({
 export interface IInlineSkillsListProps {
   skills: Skill[];
   onSelectSkill: (skillId: string) => void;
-  onExpand: () => void;
 }
 
 export default function InlineSkillsList(props: IInlineSkillsListProps): React.ReactElement {
@@ -56,10 +55,7 @@ export default function InlineSkillsList(props: IInlineSkillsListProps): React.R
           key={skill.id}
           type="button"
           className={styles.row}
-          onClick={() => {
-            props.onSelectSkill(skill.id);
-            props.onExpand();
-          }}
+          onClick={() => props.onSelectSkill(skill.id)}
         >
           <div className={styles.content}>
             <Text weight="semibold">{skill.name}</Text>

@@ -41,10 +41,7 @@ var useStyles = (0, react_components_1.makeStyles)({
 });
 function InlineSkillsList(props) {
     var styles = useStyles();
-    return (React.createElement("div", { className: styles.list }, props.skills.map(function (skill) { return (React.createElement("button", { key: skill.id, type: "button", className: styles.row, onClick: function () {
-            props.onSelectSkill(skill.id);
-            props.onExpand();
-        } },
+    return (React.createElement("div", { className: styles.list }, props.skills.map(function (skill) { return (React.createElement("button", { key: skill.id, type: "button", className: styles.row, onClick: function () { return props.onSelectSkill(skill.id); } },
         React.createElement("div", { className: styles.content },
             React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name),
             React.createElement(react_components_1.Body1, null, skill.description)),
