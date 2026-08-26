@@ -1,0 +1,23 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-component-manifest.schema.json",
+  "id": "7f6a4b7c-32d0-4d3f-8a1a-35f7e4ac5b29",
+  "alias": "SharePointSkillsFactoryCopilotComponent",
+  "componentType": "CopilotComponent",
+  "copilotType": "Ux",
+  "version": "*",
+  "manifestVersion": 2,
+  "capabilities": {
+    "availableDisplayModes": ["inline", "fullscreen"]
+  },
+  "tools": [
+    {
+      "name": "SharePointSkillsFactoryTool",
+      "description": {
+        "default": "Create. Discover. Understand. Use this tool to browse skills, inspect usage across SharePoint, and create a new Skill from a natural-language request."
+      },
+      "propertiesSchema": {
+        "id": "$../lib/SharePointSkillsFactoryCopilotComponentProperties.js:default;"
+      }
+    }
+  ]
+}

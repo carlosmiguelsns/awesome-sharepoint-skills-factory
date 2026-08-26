@@ -1,0 +1,9 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+  "schema_version": "v2.4",
+  "namespace": "sharepointskillsfactory",
+  "name_for_human": "SharePoint Skills Factory",
+  "description_for_human": "Create. Discover. Understand.",
+  "description_for_model": "A Copilot-powered workspace for creating Skills and understanding where Skills are used across SharePoint.",
+  "contact_email": "publisher@example.com"
+}

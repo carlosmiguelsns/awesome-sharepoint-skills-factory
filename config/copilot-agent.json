@@ -1,0 +1,14 @@
+{
+  "$schema": "../node_modules/@microsoft/spfx-heft-plugins/lib-commonjs/plugins/copilotAgentPlugin/copilot-agent.schema.json",
+  "agents": [
+    {
+      "name": {
+        "default": "Awesome SharePoint Skills Factory"
+      },
+      "description": {
+        "default": "Create, discover, and understand SharePoint Skills across sites and site collections."
+      },
+      "components": ["7f6a4b7c-32d0-4d3f-8a1a-35f7e4ac5b29"]
+    }
+  ]
+}

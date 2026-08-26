@@ -1,0 +1,63 @@
+{
+  "id": "7f6a4b7c-32d0-4d3f-8a1a-35f7e4ac5b29",
+  "alias": "SharePointSkillsFactoryCopilotComponent",
+  "componentType": "CopilotComponent",
+  "copilotType": "Ux",
+  "version": "0.0.1",
+  "manifestVersion": 2,
+  "capabilities": {
+    "availableDisplayModes": [
+      "inline",
+      "fullscreen"
+    ]
+  },
+  "tools": [
+    {
+      "name": "SharePointSkillsFactoryTool",
+      "description": {
+        "default": "Create. Discover. Understand. Use this tool to browse skills, inspect usage across SharePoint, and create a new Skill from a natural-language request."
+      },
+      "propertiesSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "inputQuery": {
+            "description": "Natural language query that drives the initial inline experience.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "loaderConfig": {
+    "internalModuleBaseUrls": [],
+    "entryModuleId": "sharepoint-skills-factory",
+    "scriptResources": {
+      "sharepoint-skills-factory": {
+        "type": "path",
+        "path": "sharepoint-skills-factory.js"
+      },
+      "react": {
+        "type": "component",
+        "id": "0d910c1c-13b9-4e1c-9aa4-b008c5e42d7d",
+        "version": "17.0.1"
+      },
+      "react-dom": {
+        "type": "component",
+        "id": "aa0a46ec-1505-43cd-a44a-93f3a5aa460a",
+        "version": "17.0.1"
+      },
+      "@microsoft/sp-copilot-component": {
+        "type": "component",
+        "id": "e1793060-eada-4fcd-9f1c-cd6f0ccd2b96",
+        "version": "1.24.0"
+      },
+      "@microsoft/sp-http": {
+        "type": "component",
+        "id": "c07208f0-ea3b-4c1a-9965-ac1b825211a6",
+        "version": "1.24.0"
+      }
+    }
+  }
+}

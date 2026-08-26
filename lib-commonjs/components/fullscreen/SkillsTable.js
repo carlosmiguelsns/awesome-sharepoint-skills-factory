@@ -1,0 +1,117 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = SkillsTable;
+var tslib_1 = require("tslib");
+var React = tslib_1.__importStar(require("react"));
+var react_components_1 = require("@fluentui/react-components");
+var react_icons_1 = require("@fluentui/react-icons");
+var dateHelpers_1 = require("../../utils/dateHelpers");
+var useStyles = (0, react_components_1.makeStyles)({
+    table: {
+        width: '100%',
+        borderCollapse: 'collapse'
+    },
+    headerCell: {
+        textAlign: 'left',
+        padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS),
+        borderBottom: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2)
+    },
+    row: {
+        cursor: 'pointer',
+        borderBottom: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2)
+    },
+    selectedRow: {
+        backgroundColor: react_components_1.tokens.colorNeutralBackground3
+    },
+    cell: {
+        padding: "".concat(react_components_1.tokens.spacingVerticalS, " ").concat(react_components_1.tokens.spacingHorizontalS),
+        verticalAlign: 'top'
+    },
+    statusCell: {
+        width: '1%',
+        paddingRight: 0
+    },
+    statusIcon: {
+        color: react_components_1.tokens.colorPaletteGreenForeground1,
+        marginTop: react_components_1.tokens.spacingVerticalXS
+    },
+    skillName: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: react_components_1.tokens.spacingVerticalXXS
+    }
+});
+function SkillsTable(props) {
+    var styles = useStyles();
+    var _a = React.useState('skill'), sortField = _a[0], setSortField = _a[1];
+    var _b = React.useState('ascending'), sortDirection = _b[0], setSortDirection = _b[1];
+    var collectionNameForSkill = React.useCallback(function (skill) {
+        var firstCollectionId = skill.siteCollectionIds[0];
+        var collection = props.siteCollections.find(function (item) { return item.id === firstCollectionId; });
+        return collection ? collection.name : '—';
+    }, [props.siteCollections]);
+    var getOwnerName = React.useCallback(function (skill) { return (skill.isOwnedByCurrentUser ? 'You' : skill.owner); }, []);
+    var sortedSkills = React.useMemo(function () {
+        var items = props.skills.slice();
+        var compareText = function (left, right) { return left.localeCompare(right, undefined, { sensitivity: 'base' }); };
+        items.sort(function (left, right) {
+            var comparison = 0;
+            if (sortField === 'skill') {
+                comparison = compareText(left.name, right.name);
+            }
+            else if (sortField === 'owner') {
+                comparison = compareText(getOwnerName(left), getOwnerName(right));
+            }
+            else if (sortField === 'collection') {
+                comparison = compareText(collectionNameForSkill(left), collectionNameForSkill(right));
+            }
+            else {
+                comparison = left.modifiedDate.localeCompare(right.modifiedDate);
+            }
+            return sortDirection === 'ascending' ? comparison : -comparison;
+        });
+        return items;
+    }, [collectionNameForSkill, getOwnerName, props.skills, sortDirection, sortField]);
+    var requestSort = React.useCallback(function (field) {
+        if (sortField === field) {
+            setSortDirection(function (current) { return (current === 'ascending' ? 'descending' : 'ascending'); });
+            return;
+        }
+        setSortField(field);
+        setSortDirection(field === 'modified' ? 'descending' : 'ascending');
+    }, [sortField]);
+    var sortIconFor = React.useCallback(function (field) {
+        if (sortField !== field) {
+            return React.createElement(react_icons_1.ChevronUpDown24Regular, null);
+        }
+        return sortDirection === 'ascending' ? React.createElement(react_icons_1.ChevronUp24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null);
+    }, [sortDirection, sortField]);
+    return (React.createElement("table", { className: styles.table },
+        React.createElement("thead", null,
+            React.createElement("tr", null,
+                React.createElement("th", { className: styles.headerCell }),
+                React.createElement("th", { className: styles.headerCell },
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('skill'), onClick: function () { return requestSort('skill'); } }, "Skill")),
+                React.createElement("th", { className: styles.headerCell },
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('owner'), onClick: function () { return requestSort('owner'); } }, "Owner")),
+                React.createElement("th", { className: styles.headerCell },
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('collection'), onClick: function () { return requestSort('collection'); } }, "Site Collection")),
+                React.createElement("th", { className: styles.headerCell },
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('modified'), onClick: function () { return requestSort('modified'); } }, "Modified")))),
+        React.createElement("tbody", null, sortedSkills.map(function (skill) {
+            var isSelected = props.selectedSkillId === skill.id;
+            return (React.createElement("tr", { key: skill.id, className: "".concat(styles.row, " ").concat(isSelected ? styles.selectedRow : ''), onClick: function () { return props.onSelectSkill(skill.id); } },
+                React.createElement("td", { className: "".concat(styles.cell, " ").concat(styles.statusCell) }, isSelected ? React.createElement(react_icons_1.CheckmarkCircle24Filled, { className: styles.statusIcon }) : null),
+                React.createElement("td", { className: styles.cell },
+                    React.createElement("div", { className: styles.skillName },
+                        React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name),
+                        React.createElement(react_components_1.Body1, null, skill.description))),
+                React.createElement("td", { className: styles.cell },
+                    React.createElement(react_components_1.Persona, { name: skill.owner, secondaryText: skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner', size: "small" })),
+                React.createElement("td", { className: styles.cell },
+                    React.createElement(react_components_1.Caption1, null, collectionNameForSkill(skill))),
+                React.createElement("td", { className: styles.cell },
+                    React.createElement(react_components_1.Caption1, null, (0, dateHelpers_1.formatRelativeDate)(skill.modifiedDate)))));
+        }))));
+}
+//# sourceMappingURL=SkillsTable.js.map

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "awesome-sharepoint-skills-factory-client-side-solution",
+    "id": "7d4c0f9d-9aa0-4f38-90d2-7de34b4d9f4f",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "Awesome SharePoint Skills Factory",
+      "websiteUrl": "https://example.com",
+      "privacyUrl": "https://example.com/privacy",
+      "termsOfUseUrl": "https://example.com/terms",
+      "mpnId": "Undefined-1.24.0-beta.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Awesome SharePoint Skills Factory"
+      },
+      "longDescription": {
+        "default": "Create. Discover. Understand."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Sites.Read.All"
+      }
+    ],
+    "features": [
+      {
+        "title": "Awesome SharePoint Skills Factory Feature",
+        "description": "Activates the Awesome SharePoint Skills Factory Copilot component.",
+        "id": "4a38f0b2-1cf5-4e96-8c8a-83ed0f6bf4b5",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/sharepoint-skills-factory.sppkg"
+  }
+}

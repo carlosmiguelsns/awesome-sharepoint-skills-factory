@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.29/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.29",
+  "version": "1.0.0",
+  "id": "7d4c0f9d-9aa0-4f38-90d2-7de34b4d9f4f",
+  "developer": {
+    "name": "SharePoint Skills Factory",
+    "websiteUrl": "https://example.com",
+    "privacyUrl": "https://example.com/privacy",
+    "termsOfUseUrl": "https://example.com/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "SharePoint Skills Factory",
+    "full": "SharePoint Skills Factory — SPFx Copilot Component"
+  },
+  "description": {
+    "short": "Create. Discover. Understand.",
+    "full": "A Copilot-powered workspace for creating Skills and understanding where Skills are used across SharePoint."
+  },
+  "accentColor": "#0078D4",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "sharepointSkillsFactoryAgent",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "permissions": ["identity"],
+  "validDomains": []
+}

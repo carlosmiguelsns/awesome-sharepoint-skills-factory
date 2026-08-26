@@ -1,0 +1,124 @@
+import { type MSGraphClientFactory, type MSGraphClientV3 } from '@microsoft/sp-http';
+
+import type { SharePointSite } from '../models';
+import { buildIdFromUrl, getSiteCollectionNameFromUrl, getSiteCollectionUrl } from '../utils/siteHelpers';
+
+interface IGraphSiteCollection {
+  id?: string;
+  hostName?: string;
+}
+
+interface IGraphSiteResponse {
+  id?: string;
+  name?: string;
+  displayName?: string;
+  webUrl?: string;
+  siteCollection?: IGraphSiteCollection;
+}
+
+interface IGraphSiteListResponse {
+  value?: IGraphSiteResponse[];
+  '@odata.nextLink'?: string;
+}
+
+export interface ISiteDiscoveryProgress {
+  discoveredCount: number;
+  pageNumber: number;
+}
+
+export interface ISiteDiscoveryOptions {
+  onProgress?: (progress: ISiteDiscoveryProgress) => void;
+}
+
+function toGraphApiPath(nextLink: string): string {
+  try {
+    const parsed: URL = new URL(nextLink);
+    return `${parsed.pathname.replace(/^\//, '')}${parsed.search}`;
+  } catch {
+    return nextLink.replace(/^\//, '');
+  }
+}
+
+function isVisibleSite(site: IGraphSiteResponse): boolean {
+  const webUrl: string = `${site.webUrl || ''}`.toLowerCase();
+
+  if (
+    webUrl.indexOf('contentstorage') !== -1 ||
+    webUrl.indexOf('content storage') !== -1 ||
+    webUrl.indexOf('appcatalog') !== -1 ||
+    webUrl.indexOf('personal') !== -1 ||
+    webUrl.indexOf('groupforanswersinvivaengagedonotdelete') !== -1
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeSite(site: IGraphSiteResponse): SharePointSite | undefined {
+  const webUrl: string = site.webUrl || '';
+
+  if (!webUrl) {
+    return undefined;
+  }
+
+  const siteCollectionUrl: string = getSiteCollectionUrl(webUrl);
+  const siteCollectionName: string = getSiteCollectionNameFromUrl(webUrl);
+  const hostname: string = site.siteCollection?.hostName || new URL(webUrl).host;
+
+  return {
+    id: site.id || buildIdFromUrl(webUrl),
+    name: site.displayName || site.name || siteCollectionName,
+    url: webUrl,
+    webUrl,
+    hostname,
+    siteCollectionId: site.siteCollection?.id || buildIdFromUrl(siteCollectionUrl),
+    siteCollectionName,
+    owner: 'Tenant data',
+    description: 'Discovered from Microsoft Graph.',
+    template: 'SharePoint'
+  };
+}
+
+export class GraphSiteService {
+  constructor(private readonly msGraphClientFactory?: MSGraphClientFactory) {}
+
+  public async getAllSites(options: ISiteDiscoveryOptions = {}): Promise<SharePointSite[]> {
+    if (!this.msGraphClientFactory) {
+      return [];
+    }
+
+    const graphClient: MSGraphClientV3 = await this.msGraphClientFactory.getClient('3');
+    const discoveredSites: SharePointSite[] = [];
+    const seenIds: Set<string> = new Set();
+    let nextPath: string | undefined = 'sites?search=*';
+    let pageNumber: number = 0;
+
+    while (nextPath) {
+      pageNumber += 1;
+      const response: IGraphSiteListResponse = await graphClient.api(nextPath).get();
+      const pageSites: SharePointSite[] = (response.value || [])
+        .filter((site: IGraphSiteResponse) => isVisibleSite(site))
+        .map((site: IGraphSiteResponse) => normalizeSite(site))
+        .filter((site: SharePointSite | undefined): site is SharePointSite => Boolean(site));
+
+      for (const site of pageSites) {
+        if (seenIds.has(site.id)) {
+          continue;
+        }
+
+        seenIds.add(site.id);
+        discoveredSites.push(site);
+      }
+
+      options.onProgress?.({
+        discoveredCount: discoveredSites.length,
+        pageNumber
+      });
+
+      nextPath = response['@odata.nextLink'] ? toGraphApiPath(response['@odata.nextLink']) : undefined;
+    }
+
+    return discoveredSites;
+  }
+}

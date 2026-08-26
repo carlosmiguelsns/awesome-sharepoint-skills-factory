@@ -1,0 +1,27 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.8/schema.json",
+  "version": "v1.8",
+  "name": "SharePoint Skills Factory",
+  "description": "Create, discover, and understand SharePoint Skills across sites and site collections.",
+  "instructions": "$[file('instruction.txt')]",
+  "conversation_starters": [
+    {
+      "title": "Show my skills",
+      "text": "Show my Skills"
+    },
+    {
+      "title": "Create an HR skill",
+      "text": "Create a Skill that helps employees find and understand our HR policies."
+    },
+    {
+      "title": "Find usage",
+      "text": "Where is the Build HTML Dashboard skill used?"
+    }
+  ],
+  "actions": [
+    {
+      "id": "sharepointSkillsFactoryAction",
+      "file": "ai-plugin.json"
+    }
+  ]
+}

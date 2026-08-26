@@ -1,0 +1,11 @@
+node_modules/
+.npm-cache/
+lib/
+dist/
+temp/
+solution/
+*.log
+.vscode/
+*.suo
+*.user
+*.js.map
