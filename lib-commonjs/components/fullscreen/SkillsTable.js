@@ -27,14 +27,6 @@ var useStyles = (0, react_components_1.makeStyles)({
         padding: "".concat(react_components_1.tokens.spacingVerticalS, " ").concat(react_components_1.tokens.spacingHorizontalS),
         verticalAlign: 'top'
     },
-    statusCell: {
-        width: '1%',
-        paddingRight: 0
-    },
-    statusIcon: {
-        color: react_components_1.tokens.colorPaletteGreenForeground1,
-        marginTop: react_components_1.tokens.spacingVerticalXS
-    },
     skillName: {
         display: 'flex',
         flexDirection: 'column',
@@ -45,12 +37,8 @@ function SkillsTable(props) {
     var styles = useStyles();
     var _a = React.useState('skill'), sortField = _a[0], setSortField = _a[1];
     var _b = React.useState('ascending'), sortDirection = _b[0], setSortDirection = _b[1];
-    var collectionNameForSkill = React.useCallback(function (skill) {
-        var firstCollectionId = skill.siteCollectionIds[0];
-        var collection = props.siteCollections.find(function (item) { return item.id === firstCollectionId; });
-        return collection ? collection.name : '—';
-    }, [props.siteCollections]);
-    var getOwnerName = React.useCallback(function (skill) { return (skill.isOwnedByCurrentUser ? 'You' : skill.owner); }, []);
+    var getOwnerName = React.useCallback(function (skill) { return (skill.isOwnedByCurrentUser ? props.currentUserName || skill.owner : skill.owner); }, [props.currentUserName]);
+    var getModifiedByName = React.useCallback(function (skill) { return (skill.isOwnedByCurrentUser ? props.currentUserName || skill.owner : skill.owner); }, [props.currentUserName]);
     var sortedSkills = React.useMemo(function () {
         var items = props.skills.slice();
         var compareText = function (left, right) { return left.localeCompare(right, undefined, { sensitivity: 'base' }); };
@@ -62,23 +50,26 @@ function SkillsTable(props) {
             else if (sortField === 'owner') {
                 comparison = compareText(getOwnerName(left), getOwnerName(right));
             }
-            else if (sortField === 'collection') {
-                comparison = compareText(collectionNameForSkill(left), collectionNameForSkill(right));
+            else if (sortField === 'created') {
+                comparison = compareText(left.skillMarkdownCreatedDate || left.createdDate, right.skillMarkdownCreatedDate || right.createdDate);
+            }
+            else if (sortField === 'modifiedBy') {
+                comparison = compareText(getModifiedByName(left), getModifiedByName(right));
             }
             else {
-                comparison = left.modifiedDate.localeCompare(right.modifiedDate);
+                comparison = compareText(left.skillMarkdownModifiedDate || left.modifiedDate, right.skillMarkdownModifiedDate || right.modifiedDate);
             }
             return sortDirection === 'ascending' ? comparison : -comparison;
         });
         return items;
-    }, [collectionNameForSkill, getOwnerName, props.skills, sortDirection, sortField]);
+    }, [getOwnerName, props.skills, sortDirection, sortField]);
     var requestSort = React.useCallback(function (field) {
         if (sortField === field) {
             setSortDirection(function (current) { return (current === 'ascending' ? 'descending' : 'ascending'); });
             return;
         }
         setSortField(field);
-        setSortDirection(field === 'modified' ? 'descending' : 'ascending');
+        setSortDirection(field === 'modifiedDate' ? 'descending' : 'ascending');
     }, [sortField]);
     var sortIconFor = React.useCallback(function (field) {
         if (sortField !== field) {
@@ -89,29 +80,31 @@ function SkillsTable(props) {
     return (React.createElement("table", { className: styles.table },
         React.createElement("thead", null,
             React.createElement("tr", null,
-                React.createElement("th", { className: styles.headerCell }),
                 React.createElement("th", { className: styles.headerCell },
                     React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('skill'), onClick: function () { return requestSort('skill'); } }, "Skill")),
                 React.createElement("th", { className: styles.headerCell },
                     React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('owner'), onClick: function () { return requestSort('owner'); } }, "Owner")),
                 React.createElement("th", { className: styles.headerCell },
-                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('collection'), onClick: function () { return requestSort('collection'); } }, "Site Collection")),
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('created'), onClick: function () { return requestSort('created'); } }, "Created Date")),
                 React.createElement("th", { className: styles.headerCell },
-                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('modified'), onClick: function () { return requestSort('modified'); } }, "Modified")))),
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('modifiedBy'), onClick: function () { return requestSort('modifiedBy'); } }, "Modified by")),
+                React.createElement("th", { className: styles.headerCell },
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('modifiedDate'), onClick: function () { return requestSort('modifiedDate'); } }, "Modified date")))),
         React.createElement("tbody", null, sortedSkills.map(function (skill) {
             var isSelected = props.selectedSkillId === skill.id;
             return (React.createElement("tr", { key: skill.id, className: "".concat(styles.row, " ").concat(isSelected ? styles.selectedRow : ''), onClick: function () { return props.onSelectSkill(skill.id); } },
-                React.createElement("td", { className: "".concat(styles.cell, " ").concat(styles.statusCell) }, isSelected ? React.createElement(react_icons_1.CheckmarkCircle24Filled, { className: styles.statusIcon }) : null),
                 React.createElement("td", { className: styles.cell },
                     React.createElement("div", { className: styles.skillName },
                         React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name),
                         React.createElement(react_components_1.Body1, null, skill.description))),
                 React.createElement("td", { className: styles.cell },
-                    React.createElement(react_components_1.Persona, { name: skill.owner, secondaryText: skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner', size: "small" })),
+                    React.createElement(react_components_1.Persona, { name: getOwnerName(skill), secondaryText: skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner', size: "small" })),
                 React.createElement("td", { className: styles.cell },
-                    React.createElement(react_components_1.Caption1, null, collectionNameForSkill(skill))),
+                    React.createElement(react_components_1.Caption1, null, (0, dateHelpers_1.formatLongDate)(skill.skillMarkdownCreatedDate || skill.createdDate))),
                 React.createElement("td", { className: styles.cell },
-                    React.createElement(react_components_1.Caption1, null, (0, dateHelpers_1.formatRelativeDate)(skill.modifiedDate)))));
+                    React.createElement(react_components_1.Caption1, null, getModifiedByName(skill))),
+                React.createElement("td", { className: styles.cell },
+                    React.createElement(react_components_1.Caption1, null, (0, dateHelpers_1.formatLongDate)(skill.skillMarkdownModifiedDate || skill.modifiedDate)))));
         }))));
 }
 //# sourceMappingURL=SkillsTable.js.map

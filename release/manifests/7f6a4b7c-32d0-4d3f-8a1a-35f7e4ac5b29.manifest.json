@@ -20,12 +20,7 @@
       "propertiesSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {
-          "inputQuery": {
-            "description": "Natural language query that drives the initial inline experience.",
-            "type": "string"
-          }
-        },
+        "properties": {},
         "additionalProperties": false
       }
     }

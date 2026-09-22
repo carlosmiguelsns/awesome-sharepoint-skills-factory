@@ -13,3 +13,13 @@ export function normalizeSearch(value: string): string {
 export function containsSearch(haystack: string, needle: string): boolean {
   return normalizeSearch(haystack).includes(normalizeSearch(needle));
 }
+
+export function normalizeSkillFolderName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}

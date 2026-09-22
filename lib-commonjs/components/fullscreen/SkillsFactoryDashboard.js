@@ -5,7 +5,9 @@ var tslib_1 = require("tslib");
 var React = tslib_1.__importStar(require("react"));
 var react_components_1 = require("@fluentui/react-components");
 var react_icons_1 = require("@fluentui/react-icons");
-var SkillCards_1 = tslib_1.__importDefault(require("../SkillCards"));
+var react_editor_1 = require("@toast-ui/react-editor");
+require("@toast-ui/editor/dist/toastui-editor.css");
+var textHelpers_1 = require("../../utils/textHelpers");
 var SkillDetailsPanel_1 = tslib_1.__importDefault(require("./SkillDetailsPanel"));
 var SitesTable_1 = tslib_1.__importDefault(require("./SitesTable"));
 var SkillsTable_1 = tslib_1.__importDefault(require("./SkillsTable"));
@@ -23,6 +25,17 @@ var useStyles = (0, react_components_1.makeStyles)({
     usageBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
     usageTopBar: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'start' },
     usageFilterChips: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalXS, alignItems: 'center' },
+    filterChip: { display: 'inline-flex', alignItems: 'center', gap: react_components_1.tokens.spacingHorizontalXXS },
+    filterChipDismiss: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+        marginLeft: react_components_1.tokens.spacingHorizontalXXS,
+        // Badge renders a decorative absolutely-positioned ::after overlay for its border; without a
+        // higher stacking order this icon would sit underneath it and never receive pointer clicks.
+        position: 'relative',
+        zIndex: 1
+    },
     usagePanel: {
         position: 'absolute',
         top: 0,
@@ -36,7 +49,45 @@ var useStyles = (0, react_components_1.makeStyles)({
         borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge
     },
     usagePanelBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS, maxHeight: '72vh', overflowY: 'auto' },
-    usagePanelSpacer: { minHeight: '1px' },
+    usagePanelBodyNoScroll: { maxHeight: 'none', overflowY: 'visible' },
+    createPanel: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 'min(580px, 92vw)',
+        zIndex: 5,
+        boxShadow: react_components_1.tokens.shadow16,
+        borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
+        borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge,
+        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge
+    },
+    createPanelOverlay: {
+        position: 'absolute',
+        inset: 0,
+        zIndex: 6,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
+        opacity: 0.9,
+        borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge,
+        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge
+    },
+    createPanelBody: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: react_components_1.tokens.spacingVerticalS,
+        paddingBottom: react_components_1.tokens.spacingVerticalS
+    },
+    createPanelForm: {
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 0.95fr) minmax(0, 1.05fr)',
+        gap: react_components_1.tokens.spacingHorizontalS,
+        alignItems: 'start'
+    },
+    createPanelFormFullWidth: {
+        gridColumn: '1 / -1'
+    },
     searchPanel: { position: 'absolute', right: 0, top: 0, width: 'min(420px, 92vw)', zIndex: 5, boxShadow: react_components_1.tokens.shadow16, borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge, borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge },
     searchPanelBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS, maxHeight: '72vh', overflowY: 'auto' },
     filterGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'end' },
@@ -45,15 +96,39 @@ var useStyles = (0, react_components_1.makeStyles)({
     filterPanelHeader: { display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS },
     filterPanelTitle: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS },
     filterPanelClose: { alignSelf: 'flex-end' },
+    cardOrderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS },
+    cardOrderActions: { display: 'flex', alignItems: 'center', gap: react_components_1.tokens.spacingHorizontalXXS },
+    skillContentField: {
+        boxSizing: 'border-box',
+        width: '550px',
+        minWidth: 0,
+        maxWidth: '100%'
+    },
+    skillContentEditor: {
+        boxSizing: 'border-box',
+        width: '550px',
+        minWidth: 0,
+        maxWidth: '100%',
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        overflow: 'hidden',
+        '& > div': {
+            boxSizing: 'border-box',
+            width: '550px',
+            minWidth: 0,
+            maxWidth: '100%'
+        }
+    },
+    statusText: { color: react_components_1.tokens.colorNeutralForeground3 },
+    statusSuccess: { color: react_components_1.tokens.colorPaletteGreenForeground1 },
+    statusError: { color: react_components_1.tokens.colorPaletteRedForeground1 },
+    createPreview: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS },
     select: { minHeight: '32px', borderRadius: react_components_1.tokens.borderRadiusMedium, border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), backgroundColor: react_components_1.tokens.colorNeutralBackground1, color: react_components_1.tokens.colorNeutralForeground1, padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS), font: 'inherit' },
     filterSummary: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalXS, alignItems: 'center' },
-    usageCard: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
     compactStatCard: { display: 'inline-flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS, minHeight: '92px', width: 'fit-content', minWidth: '180px', padding: react_components_1.tokens.spacingVerticalM },
     kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: react_components_1.tokens.spacingHorizontalM },
     kpiCard: { minHeight: '104px' },
-    chartGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: react_components_1.tokens.spacingHorizontalS },
-    chartCard: { minHeight: '100%', maxHeight: '460px', overflowY: 'auto' },
-    chartWide: { gridColumn: '1 / -1' },
+    chartGrid: { display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'stretch', overflowX: 'auto' },
+    chartCard: { flex: '1 1 0', minWidth: '340px', minHeight: '100%', overflowY: 'visible' },
     chartList: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
     chartItem: { border: 'none', background: 'transparent', padding: 0, textAlign: 'left', width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXS },
     chartItemHeader: { display: 'flex', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'baseline' },
@@ -69,25 +144,23 @@ var useStyles = (0, react_components_1.makeStyles)({
     legendSwatch: { width: '12px', height: '12px', borderRadius: react_components_1.tokens.borderRadiusCircular, flexShrink: 0 },
     legendGreen: { backgroundColor: react_components_1.tokens.colorPaletteGreenForeground1 },
     legendGray: { backgroundColor: react_components_1.tokens.colorNeutralStroke1 },
-    siteTiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: react_components_1.tokens.spacingHorizontalS },
-    siteTile: {
-        border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
-        borderRadius: react_components_1.tokens.borderRadiusLarge,
-        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
-        padding: react_components_1.tokens.spacingVerticalM,
-        cursor: 'pointer',
+    distributionList: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
+    distributionRow: { display: 'grid', gridTemplateColumns: 'minmax(76px, auto) 1fr minmax(96px, auto)', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'center' },
+    distributionTrack: { position: 'relative', height: '14px', borderRadius: react_components_1.tokens.borderRadiusMedium, backgroundColor: react_components_1.tokens.colorNeutralBackground3, overflow: 'hidden' },
+    distributionFill: { height: '100%', borderRadius: react_components_1.tokens.borderRadiusMedium, backgroundColor: react_components_1.tokens.colorBrandBackground },
+    distributionTrackLabel: {
+        position: 'absolute',
+        inset: 0,
         display: 'flex',
-        flexDirection: 'column',
-        gap: react_components_1.tokens.spacingVerticalS,
-        minHeight: '100%'
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: react_components_1.tokens.fontSizeBase200,
+        fontWeight: react_components_1.tokens.fontWeightSemibold,
+        color: react_components_1.tokens.colorNeutralForeground1,
+        textShadow: "0 0 3px ".concat(react_components_1.tokens.colorNeutralBackground1, ", 0 0 3px ").concat(react_components_1.tokens.colorNeutralBackground1)
     },
-    siteTileHeader: { display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS },
-    siteTileMeta: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS, minWidth: 0, flex: '1 1 auto' },
-    siteTileUrl: { maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-    siteSkillRow: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalXS, minWidth: 0 },
-    siteSkillCount: { flexShrink: 0, alignSelf: 'flex-start' },
-    siteSkillMore: { color: react_components_1.tokens.colorNeutralForeground3 },
-    usageViewport: { paddingRight: react_components_1.tokens.spacingHorizontalXXS },
+    distributionMeta: { display: 'flex', justifyContent: 'flex-end', gap: react_components_1.tokens.spacingHorizontalXS, whiteSpace: 'nowrap' },
+    usageViewport: { paddingRight: react_components_1.tokens.spacingHorizontalXXS, overflowX: 'auto', overflowY: 'hidden' },
     heatmapScroll: { overflow: 'auto' },
     heatmapTable: { borderCollapse: 'collapse', minWidth: 'max-content', width: '100%' },
     heatmapCorner: { position: 'sticky', top: 0, left: 0, zIndex: 3, backgroundColor: react_components_1.tokens.colorNeutralBackground1, borderBottom: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS), textAlign: 'left', whiteSpace: 'nowrap' },
@@ -103,6 +176,11 @@ var useStyles = (0, react_components_1.makeStyles)({
 });
 function compareText(left, right) {
     return left.localeCompare(right, undefined, { sensitivity: 'base' });
+}
+function buildSkillMarkdownContent(normalizedSkillName, skillName, content) {
+    var escapedNormalizedName = normalizedSkillName.replace(/"/g, '\\"');
+    var header = "---\nname: \"".concat(escapedNormalizedName, "\"\ndescription: \"\"\n---\n\n# ").concat(skillName, "\n\n\n");
+    return "".concat(header).concat(content);
 }
 function buildSiteSkillMap(sites, skills) {
     var map = new Map();
@@ -121,27 +199,85 @@ function buildSiteSkillMap(sites, skills) {
     }
     return map;
 }
+var USAGE_CARD_DEFINITIONS = [
+    { key: 'skills-adoption', label: 'Skills ranked by site adoption' },
+    { key: 'sites-with-vs-without', label: 'Sites with vs. without skills' },
+    { key: 'skill-distribution', label: 'Skill distribution' },
+    { key: 'sites', label: 'Sites' }
+];
+var DEFAULT_USAGE_CARD_ORDER = USAGE_CARD_DEFINITIONS.map(function (definition) { return definition.key; });
+var DEFAULT_USAGE_CARD_VISIBILITY = {
+    'skills-adoption': true,
+    'sites-with-vs-without': true,
+    'skill-distribution': true,
+    sites: true
+};
 function SkillsFactoryDashboard(props) {
-    var _a, _b, _c, _d;
+    var _this = this;
+    var _a, _b, _c;
     var styles = useStyles();
-    var _e = React.useState(1), usagePage = _e[0], setUsagePage = _e[1];
-    var _f = React.useState('site'), usageSortField = _f[0], setUsageSortField = _f[1];
-    var _g = React.useState('ascending'), usageSortDirection = _g[0], setUsageSortDirection = _g[1];
-    var _h = React.useState(), usageSkillFilterId = _h[0], setUsageSkillFilterId = _h[1];
-    var _j = React.useState(), usageSiteFilterId = _j[0], setUsageSiteFilterId = _j[1];
-    var _k = React.useState('all'), usageCoverageFilter = _k[0], setUsageCoverageFilter = _k[1];
-    var _l = React.useState(false), usageFiltersOpen = _l[0], setUsageFiltersOpen = _l[1];
+    var _d = React.useState(1), usagePage = _d[0], setUsagePage = _d[1];
+    var _e = React.useState('site'), usageSortField = _e[0], setUsageSortField = _e[1];
+    var _f = React.useState('ascending'), usageSortDirection = _f[0], setUsageSortDirection = _f[1];
+    var _g = React.useState(), usageSkillFilterId = _g[0], setUsageSkillFilterId = _g[1];
+    var _h = React.useState(), usageSiteFilterId = _h[0], setUsageSiteFilterId = _h[1];
+    var _j = React.useState('all'), usageCoverageFilter = _j[0], setUsageCoverageFilter = _j[1];
+    var _k = React.useState(false), usageFiltersOpen = _k[0], setUsageFiltersOpen = _k[1];
+    var _l = React.useState(false), usageSettingsOpen = _l[0], setUsageSettingsOpen = _l[1];
     var _m = React.useState(false), skillsSearchOpen = _m[0], setSkillsSearchOpen = _m[1];
+    var _o = React.useState(false), createSkillOpen = _o[0], setCreateSkillOpen = _o[1];
+    var skillContentEditorRef = React.useRef(null);
+    var _p = React.useState(false), mySkillsOnly = _p[0], setMySkillsOnly = _p[1];
+    var _q = React.useState(DEFAULT_USAGE_CARD_ORDER), usageCardOrder = _q[0], setUsageCardOrder = _q[1];
+    var _r = React.useState(DEFAULT_USAGE_CARD_VISIBILITY), usageCardVisibility = _r[0], setUsageCardVisibility = _r[1];
+    var moveUsageCard = React.useCallback(function (key, direction) {
+        setUsageCardOrder(function (current) {
+            var _a;
+            var index = current.indexOf(key);
+            var targetIndex = index + direction;
+            if (index === -1 || targetIndex < 0 || targetIndex >= current.length) {
+                return current;
+            }
+            var next = current.slice();
+            _a = [next[targetIndex], next[index]], next[index] = _a[0], next[targetIndex] = _a[1];
+            return next;
+        });
+    }, []);
+    var setUsageCardVisible = React.useCallback(function (key, visible) {
+        setUsageCardVisibility(function (current) {
+            var _a;
+            return (tslib_1.__assign(tslib_1.__assign({}, current), (_a = {}, _a[key] = visible, _a)));
+        });
+    }, []);
+    var _s = React.useState(''), createSkillSiteId = _s[0], setCreateSkillSiteId = _s[1];
+    var _t = React.useState(''), createSkillName = _t[0], setCreateSkillName = _t[1];
+    var _u = React.useState(''), createSkillContent = _u[0], setCreateSkillContent = _u[1];
+    var _v = React.useState(false), createSkillSubmitting = _v[0], setCreateSkillSubmitting = _v[1];
+    var _w = React.useState(''), createSkillStatus = _w[0], setCreateSkillStatus = _w[1];
+    var _x = React.useState(''), createSkillError = _x[0], setCreateSkillError = _x[1];
     var theme = props.hostContext.theme === 'dark' ? react_components_1.webDarkTheme : react_components_1.webLightTheme;
     var siteSkillMap = React.useMemo(function () { return buildSiteSkillMap(props.sites, props.usageSkills); }, [props.sites, props.usageSkills]);
-    var filteredMySkills = React.useMemo(function () {
-        var needle = props.searchText.trim().toLowerCase();
-        return props.mySkills.filter(function (skill) { return !needle || [skill.name, skill.description, skill.owner, skill.knowledgeSources.join(' '), skill.suggestedPrompts.join(' ')].join(' ').toLowerCase().indexOf(needle) !== -1; });
-    }, [props.mySkills, props.searchText]);
     var filteredAllSkills = React.useMemo(function () {
         var needle = props.searchText.trim().toLowerCase();
-        return props.allSkills.filter(function (skill) { return !needle || [skill.name, skill.description, skill.owner, skill.knowledgeSources.join(' '), skill.suggestedPrompts.join(' ')].join(' ').toLowerCase().indexOf(needle) !== -1; });
-    }, [props.allSkills, props.searchText]);
+        return props.allSkills.filter(function (skill) {
+            var matchesSearch = !needle || [skill.name, skill.description, skill.owner, skill.knowledgeSources.join(' '), skill.suggestedPrompts.join(' ')].join(' ').toLowerCase().indexOf(needle) !== -1;
+            var matchesOwner = !mySkillsOnly || skill.isOwnedByCurrentUser;
+            return matchesSearch && matchesOwner;
+        });
+    }, [mySkillsOnly, props.allSkills, props.searchText]);
+    var normalizedCreateSkillName = React.useMemo(function () { return (0, textHelpers_1.normalizeSkillFolderName)(createSkillName); }, [createSkillName]);
+    var selectedCreateSkillSite = React.useMemo(function () { return props.sites.find(function (site) { return site.id === createSkillSiteId; }); }, [createSkillSiteId, props.sites]);
+    React.useEffect(function () {
+        if (props.activeTab !== 'all-skills') {
+            return;
+        }
+        if (!filteredAllSkills.length) {
+            return;
+        }
+        if (!props.selectedSkill || !filteredAllSkills.some(function (skill) { var _a; return skill.id === ((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id); })) {
+            props.onSelectSkill(filteredAllSkills[0].id);
+        }
+    }, [filteredAllSkills, props.activeTab, props.onSelectSkill, props.selectedSkill]);
     var visibleSites = React.useMemo(function () {
         var needle = props.siteSearchText.trim().toLowerCase();
         return props.sites.filter(function (site) {
@@ -194,10 +330,29 @@ function SkillsFactoryDashboard(props) {
     var visibleSitesWithSkills = React.useMemo(function () { return visibleSites.filter(function (site) { return (siteCountById.get(site.id) || 0) > 0; }).length; }, [siteCountById, visibleSites]);
     var visibleSitesWithoutSkills = Math.max(0, visibleSites.length - visibleSitesWithSkills);
     var visibleAverageSkillsPerSite = visibleSites.length ? visibleSkills.length / visibleSites.length : 0;
+    var skillDistributionBuckets = React.useMemo(function () {
+        var buckets = [
+            { label: '0 skills', count: 0 },
+            { label: '1 skill', count: 0 },
+            { label: '2 skills', count: 0 },
+            { label: '3+ skills', count: 0 }
+        ];
+        for (var _i = 0, visibleSites_2 = visibleSites; _i < visibleSites_2.length; _i++) {
+            var site = visibleSites_2[_i];
+            var skillCount = siteCountById.get(site.id) || 0;
+            buckets[Math.min(skillCount, 3)].count += 1;
+        }
+        return buckets;
+    }, [siteCountById, visibleSites]);
     var usagePageCount = Math.max(1, Math.ceil(sortedUsageSites.length / 10));
     var safeUsagePage = Math.min(usagePage, usagePageCount);
     var usagePageSites = sortedUsageSites.slice((safeUsagePage - 1) * 10, safeUsagePage * 10);
     React.useEffect(function () { setUsagePage(1); }, [props.siteSearchText, usageCoverageFilter, usageSkillFilterId, usageSiteFilterId, usageSortDirection, usageSortField]);
+    React.useEffect(function () {
+        if (createSkillOpen && !createSkillSiteId && props.sites.length) {
+            setCreateSkillSiteId(props.sites[0].id);
+        }
+    }, [createSkillOpen, createSkillSiteId, props.sites]);
     var handleUsageSortChange = React.useCallback(function (field) {
         if (usageSortField === field) {
             setUsageSortDirection(function (current) { return (current === 'ascending' ? 'descending' : 'ascending'); });
@@ -206,12 +361,63 @@ function SkillsFactoryDashboard(props) {
         setUsageSortField(field);
         setUsageSortDirection(field === 'skills' ? 'descending' : 'ascending');
     }, [usageSortField]);
-    var clearUsageFilters = React.useCallback(function () {
-        setUsageSkillFilterId(undefined);
-        setUsageSiteFilterId(undefined);
-        setUsageCoverageFilter('all');
-        props.onSiteSearchTextChange('');
-    }, [props.onSiteSearchTextChange]);
+    var handleCreateSkillSubmit = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+        var trimmedName, trimmedContent, site, normalizedName, result, error_1;
+        return tslib_1.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    trimmedName = createSkillName.trim();
+                    trimmedContent = createSkillContent;
+                    site = props.sites.find(function (item) { return item.id === createSkillSiteId; });
+                    setCreateSkillError('');
+                    setCreateSkillStatus('');
+                    if (!trimmedName) {
+                        setCreateSkillError('Skill Name is required.');
+                        return [2 /*return*/];
+                    }
+                    if (!site) {
+                        setCreateSkillError('Site selection is required.');
+                        return [2 /*return*/];
+                    }
+                    normalizedName = (0, textHelpers_1.normalizeSkillFolderName)(trimmedName);
+                    if (!normalizedName) {
+                        setCreateSkillError('Skill Name must contain at least one letter or number.');
+                        return [2 /*return*/];
+                    }
+                    if (!trimmedContent.trim()) {
+                        setCreateSkillError('Skill Content is required.');
+                        return [2 /*return*/];
+                    }
+                    setCreateSkillSubmitting(true);
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, 4, 5]);
+                    setCreateSkillStatus('Creating skill folder…');
+                    return [4 /*yield*/, props.onCreateSkill({
+                            siteUrl: site.url,
+                            skillName: trimmedName,
+                            skillContent: buildSkillMarkdownContent(normalizedName, trimmedName, trimmedContent),
+                            onProgress: function (message) { return setCreateSkillStatus(message); }
+                        })];
+                case 2:
+                    result = _a.sent();
+                    setCreateSkillStatus("Created ".concat(result.normalizedSkillName, " successfully."));
+                    setCreateSkillName('');
+                    setCreateSkillContent('');
+                    setCreateSkillSiteId('');
+                    setCreateSkillOpen(false);
+                    return [3 /*break*/, 5];
+                case 3:
+                    error_1 = _a.sent();
+                    setCreateSkillError(error_1 instanceof Error ? error_1.message : 'Failed to create the skill.');
+                    return [3 /*break*/, 5];
+                case 4:
+                    setCreateSkillSubmitting(false);
+                    return [7 /*endfinally*/];
+                case 5: return [2 /*return*/];
+            }
+        });
+    }); }, [createSkillContent, createSkillName, createSkillSiteId, props.onCreateSkill, props.sites]);
     var themeForHost = theme;
     return (React.createElement(react_components_1.IdPrefixProvider, { value: "sharepoint-skills-factory-" },
         React.createElement(react_components_1.FluentProvider, { theme: themeForHost, targetDocument: props.targetDocument, className: styles.root },
@@ -220,17 +426,20 @@ function SkillsFactoryDashboard(props) {
                 React.createElement(react_components_1.Body1, null, "Create. Discover. Understand.")),
             React.createElement("div", { className: styles.toolbar },
                 React.createElement(react_components_1.TabList, { selectedValue: props.activeTab, onTabSelect: function (_, data) { return props.onTabChange(data.value); } },
-                    React.createElement(react_components_1.Tab, { value: "my-skills" }, "My Skills"),
                     React.createElement(react_components_1.Tab, { value: "all-skills" }, "All Skills"),
                     React.createElement(react_components_1.Tab, { value: "usage" }, "Usage"))),
-            (props.activeTab === 'my-skills' || props.activeTab === 'all-skills') && (React.createElement("div", { className: styles.usageShell },
+            props.activeTab === 'all-skills' && (React.createElement("div", { className: styles.usageShell },
                 React.createElement("div", { className: styles.usageTopBar },
-                    React.createElement("div", { className: styles.usageFilterChips }, props.searchText.trim() ? React.createElement(react_components_1.Badge, { appearance: "outline" },
-                        "Search: ",
-                        props.searchText.trim()) : null),
+                    React.createElement("div", { className: styles.usageFilterChips },
+                        mySkillsOnly ? (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
+                            "Owner: You",
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear owner filter", onClick: function () { return setMySkillsOnly(false); } }))) : null,
+                        props.searchText.trim() ? (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
+                            "Search: ",
+                            props.searchText.trim(),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", onClick: function () { return props.onSearchTextChange(''); } }))) : null),
                     React.createElement("div", { className: styles.toolbarActions },
-                        React.createElement(react_components_1.Button, { appearance: "secondary", icon: skillsSearchOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () { return setSkillsSearchOpen(function (current) { return !current; }); } }, skillsSearchOpen ? 'Close search' : 'Open search'),
-                        React.createElement(react_components_1.Button, { appearance: "secondary", onClick: function () { return props.onSearchTextChange(''); }, disabled: !props.searchText.trim() }, "Clear search"))),
+                        React.createElement(react_components_1.Button, { appearance: "secondary", icon: skillsSearchOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () { return setSkillsSearchOpen(function (current) { return !current; }); } }, skillsSearchOpen ? 'Close search' : 'Open search'))),
                 skillsSearchOpen ? (React.createElement(react_components_1.Card, { className: styles.searchPanel },
                     React.createElement("div", { className: styles.searchPanelBody },
                         React.createElement("div", { className: styles.filterPanelHeader },
@@ -239,42 +448,52 @@ function SkillsFactoryDashboard(props) {
                                 React.createElement(react_components_1.Caption1, null, "Filter skills in the current tab.")),
                             React.createElement(react_components_1.Button, { className: styles.filterPanelClose, appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close search", onClick: function () { return setSkillsSearchOpen(false); } })),
                         React.createElement(react_components_1.Field, { className: styles.filterField, label: "Search", orientation: "horizontal" },
-                            React.createElement(react_components_1.Input, { value: props.searchText, onChange: function (_, data) { return props.onSearchTextChange(data.value); }, placeholder: "Search skills" }))))) : null)),
-            props.activeTab === 'my-skills' && (React.createElement("div", { className: styles.usageLayout },
-                React.createElement(react_components_1.Card, { className: styles.compactStatCard },
-                    React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "My skills") }),
-                    React.createElement(react_components_1.Text, { size: 700, weight: "semibold", style: { color: react_components_1.tokens.colorBrandForeground1 } }, props.mySkills.length)),
-                React.createElement("div", { className: styles.body },
-                    React.createElement("div", { className: styles.fullWidthBody },
-                        React.createElement(SkillCards_1.default, { skills: filteredMySkills, currentUserName: props.currentUserName, selectedSkillId: (_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id, onSelectSkill: props.onSelectSkill })),
-                    React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites.filter(function (site) { var _a; return (((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.siteIds) || []).indexOf(site.id) !== -1; }), siteCollections: props.siteCollections, currentUserName: props.currentUserName })))),
+                            React.createElement(react_components_1.Input, { value: props.searchText, onChange: function (_, data) { return props.onSearchTextChange(data.value); }, placeholder: "Search skills" })),
+                        React.createElement(react_components_1.Field, { className: styles.filterField, label: "Ownership" },
+                            React.createElement(react_components_1.Checkbox, { checked: mySkillsOnly, onChange: function (_, data) { return setMySkillsOnly(Boolean(data.checked)); }, label: "Only my skills" }),
+                            React.createElement(react_components_1.Caption1, null, "Show skills owned by the current user."))))) : null)),
             props.activeTab === 'all-skills' && (React.createElement("div", { className: styles.usageLayout },
-                React.createElement(react_components_1.Card, { className: styles.compactStatCard },
-                    React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "All skills") }),
-                    React.createElement(react_components_1.Text, { size: 700, weight: "semibold", style: { color: react_components_1.tokens.colorBrandForeground1 } }, props.allSkills.length)),
                 React.createElement("div", { className: styles.body },
                     React.createElement("div", { className: styles.fullWidthBody },
-                        React.createElement(SkillsTable_1.default, { skills: filteredAllSkills, siteCollections: props.siteCollections, selectedSkillId: (_b = props.selectedSkill) === null || _b === void 0 ? void 0 : _b.id, onSelectSkill: props.onSelectSkill })),
+                        React.createElement(SkillsTable_1.default, { skills: filteredAllSkills, selectedSkillId: (_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id, onSelectSkill: props.onSelectSkill, currentUserName: props.currentUserName })),
                     React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites.filter(function (site) { var _a; return (((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.siteIds) || []).indexOf(site.id) !== -1; }), siteCollections: props.siteCollections, currentUserName: props.currentUserName })))),
             props.activeTab === 'usage' && (React.createElement("div", { className: styles.usageShell },
                 React.createElement("div", { className: styles.usageTopBar },
                     React.createElement("div", { className: styles.usageFilterChips },
-                        usageSkillFilterId && React.createElement(react_components_1.Badge, { appearance: "outline" },
-                            "Skill: ", (_c = props.usageSkills.find(function (skill) { return skill.id === usageSkillFilterId; })) === null || _c === void 0 ? void 0 :
-                            _c.name),
-                        usageSiteFilterId && React.createElement(react_components_1.Badge, { appearance: "outline" },
-                            "Site: ", (_d = props.sites.find(function (site) { return site.id === usageSiteFilterId; })) === null || _d === void 0 ? void 0 :
-                            _d.name),
-                        usageCoverageFilter !== 'all' && React.createElement(react_components_1.Badge, { appearance: "outline" },
+                        usageSkillFilterId && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
+                            "Skill: ", (_b = props.usageSkills.find(function (skill) { return skill.id === usageSkillFilterId; })) === null || _b === void 0 ? void 0 :
+                            _b.name,
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear skill filter", onClick: function () { return setUsageSkillFilterId(undefined); } }))),
+                        usageSiteFilterId && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
+                            "Site: ", (_c = props.sites.find(function (site) { return site.id === usageSiteFilterId; })) === null || _c === void 0 ? void 0 :
+                            _c.name,
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear site filter", onClick: function () { return setUsageSiteFilterId(undefined); } }))),
+                        usageCoverageFilter !== 'all' && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Coverage: ",
-                            usageCoverageFilter === 'with-skills' ? 'with skills' : 'without skills'),
-                        props.siteSearchText.trim() && React.createElement(react_components_1.Badge, { appearance: "outline" },
+                            usageCoverageFilter === 'with-skills' ? 'with skills' : 'without skills',
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear coverage filter", onClick: function () { return setUsageCoverageFilter('all'); } }))),
+                        props.siteSearchText.trim() && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Search: ",
-                            props.siteSearchText.trim()),
-                        null),
+                            props.siteSearchText.trim(),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", onClick: function () { return props.onSiteSearchTextChange(''); } })))),
                     React.createElement("div", { className: styles.toolbarActions },
-                        React.createElement(react_components_1.Button, { appearance: "secondary", icon: usageFiltersOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () { return setUsageFiltersOpen(function (current) { return !current; }); } }, usageFiltersOpen ? 'Close filters' : 'Open filters'),
-                        React.createElement(react_components_1.Button, { appearance: "secondary", onClick: clearUsageFilters, disabled: !props.siteSearchText.trim() && !usageSkillFilterId && !usageSiteFilterId && usageCoverageFilter === 'all' }, "Clear filters"))),
+                        React.createElement(react_components_1.Button, { appearance: "secondary", icon: React.createElement(react_icons_1.Add24Regular, null), onClick: function () {
+                                setUsageFiltersOpen(false);
+                                setUsageSettingsOpen(false);
+                                setCreateSkillStatus('');
+                                setCreateSkillError('');
+                                setCreateSkillOpen(function (current) { return !current; });
+                            } }, createSkillOpen ? 'Close create skill' : 'Create Skill'),
+                        React.createElement(react_components_1.Button, { appearance: "secondary", icon: usageFiltersOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () {
+                                setCreateSkillOpen(false);
+                                setUsageSettingsOpen(false);
+                                setUsageFiltersOpen(function (current) { return !current; });
+                            } }, usageFiltersOpen ? 'Close filters' : 'Open filters'),
+                        React.createElement(react_components_1.Button, { appearance: "secondary", icon: React.createElement(react_icons_1.Settings24Regular, null), onClick: function () {
+                                setCreateSkillOpen(false);
+                                setUsageFiltersOpen(false);
+                                setUsageSettingsOpen(function (current) { return !current; });
+                            } }, usageSettingsOpen ? 'Close settings' : 'Settings'))),
                 usageFiltersOpen ? (React.createElement(react_components_1.Card, { className: styles.usagePanel },
                     React.createElement("div", { className: styles.usagePanelBody },
                         React.createElement("div", { className: styles.filterPanelHeader },
@@ -301,114 +520,150 @@ function SkillsFactoryDashboard(props) {
                                     React.createElement("option", { value: "without-skills" }, "Without skills"))),
                             React.createElement(react_components_1.Field, { className: styles.filterField, label: "Search sites" },
                                 React.createElement(react_components_1.Input, { value: props.siteSearchText, onChange: function (_, data) { return props.onSiteSearchTextChange(data.value); }, placeholder: "Search sites, URLs, or collections" })))))) : null,
-                React.createElement("div", { className: styles.usagePanelSpacer }),
-                React.createElement(react_components_1.Card, { className: styles.usageCard },
-                    React.createElement("div", { className: styles.kpiGrid }, [
-                        ['Total Sites', visibleSites.length, 'Sites in the current view'],
-                        ['Total Skills', visibleSkills.length, 'Skills used by those sites'],
-                        ['Sites with Skills', visibleSitesWithSkills, 'Sites showing at least one skill'],
-                        ['Sites without Skills', visibleSitesWithoutSkills, 'Coverage gaps in the current view'],
-                        ['Average Skills / Site', visibleAverageSkillsPerSite.toFixed(1), 'Mean skills per visible site']
-                    ].map(function (_a) {
-                        var label = _a[0], value = _a[1], hint = _a[2];
-                        return (React.createElement(react_components_1.Card, { key: String(label), className: styles.kpiCard },
-                            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, label) }),
-                            React.createElement(react_components_1.Text, { size: 800, weight: "semibold", style: { color: react_components_1.tokens.colorBrandForeground1 } }, value),
-                            React.createElement(react_components_1.Caption1, null, hint)));
-                    })),
-                    React.createElement("div", { className: styles.chartGrid },
-                        React.createElement(react_components_1.Card, { className: styles.chartCard },
-                            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skills ranked by site adoption"), description: React.createElement(react_components_1.Caption1, null, "Horizontal bars show how many visible sites use each skill.") }),
-                            React.createElement("div", { className: styles.chartList }, sortedUsageSkills.length ? sortedUsageSkills.map(function (skill) {
-                                var count = skillCountById.get(skill.id) || 0;
-                                var maxCount = Math.max.apply(Math, tslib_1.__spreadArray(tslib_1.__spreadArray([], Array.from(skillCountById.values()), false), [1], false));
-                                return React.createElement("button", { key: skill.id, type: "button", className: styles.chartItem, onClick: function () { return setUsageSkillFilterId(skill.id); } },
-                                    React.createElement("div", { className: styles.chartItemHeader },
-                                        React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name),
-                                        React.createElement(react_components_1.Caption1, null,
-                                            count,
-                                            " site",
-                                            count === 1 ? '' : 's')),
-                                    React.createElement("div", { className: styles.chartTrack },
-                                        React.createElement("div", { className: styles.chartFill, style: { width: "".concat(Math.max(4, (count / maxCount) * 100), "%") } })));
-                            }) : React.createElement(react_components_1.Body1, { className: styles.chartNote }, "No skills match the current filters."))),
-                        React.createElement(react_components_1.Card, { className: styles.chartCard },
-                            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites with vs. without skills"), description: React.createElement(react_components_1.Caption1, null, "Coverage and gap view for the current scope.") }),
-                            React.createElement("div", { className: styles.donutLayout },
-                                React.createElement("svg", { viewBox: "0 0 160 160", className: styles.donutSvg, role: "img", "aria-label": "Sites with skills versus sites without skills" },
-                                    React.createElement("circle", { cx: "80", cy: "80", r: "54", fill: "none", stroke: react_components_1.tokens.colorNeutralBackground3, strokeWidth: "20" }),
-                                    visibleSites.length ? (function () {
-                                        var circumference = 2 * Math.PI * 54;
-                                        var withLength = circumference * (visibleSitesWithSkills / visibleSites.length);
-                                        var withoutLength = circumference - withLength;
-                                        return (React.createElement(React.Fragment, null,
-                                            React.createElement("circle", { cx: "80", cy: "80", r: "54", fill: "none", stroke: react_components_1.tokens.colorPaletteGreenForeground1, strokeWidth: "20", strokeDasharray: "".concat(withLength, " ").concat(circumference), transform: "rotate(-90 80 80)", onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'with-skills' ? 'all' : 'with-skills'); }); }, style: { cursor: 'pointer' } }),
-                                            React.createElement("circle", { cx: "80", cy: "80", r: "54", fill: "none", stroke: react_components_1.tokens.colorNeutralStroke1, strokeWidth: "20", strokeDasharray: "".concat(withoutLength, " ").concat(circumference), strokeDashoffset: -withLength, transform: "rotate(-90 80 80)", onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'without-skills' ? 'all' : 'without-skills'); }); }, style: { cursor: 'pointer' } })));
-                                    })() : null,
-                                    React.createElement("text", { x: "80", y: "75", textAnchor: "middle", fontSize: "20", fill: react_components_1.tokens.colorNeutralForeground1, fontWeight: 600 }, visibleSites.length),
-                                    React.createElement("text", { x: "80", y: "96", textAnchor: "middle", fontSize: "11", fill: react_components_1.tokens.colorNeutralForeground3 }, "sites")),
-                                React.createElement(react_components_1.Caption1, { className: styles.donutCaption }, "Click a segment to filter sites with or without skills."),
-                                React.createElement("div", { className: styles.donutLegend },
-                                    React.createElement("button", { type: "button", className: styles.donutButton, onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'with-skills' ? 'all' : 'with-skills'); }); } },
-                                        React.createElement("span", { className: styles.legendLeft },
-                                            React.createElement("span", { className: "".concat(styles.legendSwatch, " ").concat(styles.legendGreen) }),
-                                            React.createElement("span", null,
-                                                React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites with skills"),
-                                                React.createElement(react_components_1.Caption1, null, visibleSitesWithSkills))),
-                                        React.createElement(react_components_1.Caption1, null, visibleSites.length ? "".concat(Math.round((visibleSitesWithSkills / visibleSites.length) * 100), "%") : '0%')),
-                                    React.createElement("button", { type: "button", className: styles.donutButton, onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'without-skills' ? 'all' : 'without-skills'); }); } },
-                                        React.createElement("span", { className: styles.legendLeft },
-                                            React.createElement("span", { className: "".concat(styles.legendSwatch, " ").concat(styles.legendGray) }),
-                                            React.createElement("span", null,
-                                                React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites without skills"),
-                                                React.createElement(react_components_1.Caption1, null, visibleSitesWithoutSkills))),
-                                        React.createElement(react_components_1.Caption1, null, visibleSites.length ? "".concat(Math.round((visibleSitesWithoutSkills / visibleSites.length) * 100), "%") : '0%'))))),
-                        React.createElement(react_components_1.Card, { className: "".concat(styles.chartCard, " ").concat(styles.chartWide) },
-                            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skills per site"), description: React.createElement(react_components_1.Caption1, null, "Sites are sorted by visible skill count, highest first.") }),
-                            React.createElement("div", { className: styles.chartList }, sortedUsageSites.length ? sortedUsageSites.map(function (site) {
-                                var count = siteCountById.get(site.id) || 0;
-                                var maxCount = Math.max.apply(Math, tslib_1.__spreadArray(tslib_1.__spreadArray([], Array.from(siteCountById.values()), false), [1], false));
-                                return (React.createElement("button", { key: site.id, type: "button", className: styles.chartItem, onClick: function () { return setUsageSiteFilterId(site.id); } },
-                                    React.createElement("div", { className: styles.chartItemHeader },
-                                        React.createElement(react_components_1.Text, { weight: "semibold" }, site.name),
-                                        React.createElement(react_components_1.Caption1, null,
-                                            count,
-                                            " skill",
-                                            count === 1 ? '' : 's')),
-                                    count > 0 ? (React.createElement("div", { className: styles.chartTrack },
-                                        React.createElement("div", { className: styles.chartFill, style: { width: "".concat(Math.max(4, (count / maxCount) * 100), "%") } }))) : (React.createElement(react_components_1.Caption1, { className: styles.heatmapEmpty }, "No skills"))));
-                            }) : React.createElement(react_components_1.Body1, { className: styles.chartNote }, "No sites match the current filters."))),
-                        React.createElement(react_components_1.Card, { className: "".concat(styles.chartCard, " ").concat(styles.chartWide) },
-                            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Site skill tiles"), description: React.createElement(react_components_1.Caption1, null, "Responsive tiles replace the old matrix and stay compact as tenant size grows.") }),
-                            React.createElement("div", { className: styles.siteTiles }, sortedUsageSites.length ? sortedUsageSites.map(function (site) {
-                                var siteSkills = visibleSkills.filter(function (skill) { return skill.siteIds.indexOf(site.id) !== -1; });
-                                var badgeLimit = 6;
-                                var overflowCount = Math.max(0, siteSkills.length - badgeLimit);
-                                return (React.createElement("button", { key: site.id, type: "button", className: styles.siteTile, onClick: function () { return setUsageSiteFilterId(site.id); } },
-                                    React.createElement("div", { className: styles.siteTileHeader },
-                                        React.createElement("div", { className: styles.siteTileMeta },
-                                            React.createElement(react_components_1.Text, { weight: "semibold" }, site.name),
-                                            React.createElement(react_components_1.Caption1, null, site.siteCollectionName || 'Site collection unavailable'),
-                                            React.createElement(react_components_1.Caption1, { className: styles.siteTileUrl }, (site.webUrl || site.url || '').replace(/^https?:\/\/[^/]*?\.sharepoint\.com/i, '') || (site.webUrl || site.url || ''))),
-                                        React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.siteSkillCount }, siteSkills.length)),
-                                    React.createElement("div", { className: styles.siteSkillRow },
-                                        siteSkills.slice(0, badgeLimit).map(function (skill) { return (React.createElement(react_components_1.Badge, { key: skill.id, appearance: "outline", onClick: function (event) { event.stopPropagation(); setUsageSkillFilterId(skill.id); setUsageSiteFilterId(site.id); } }, skill.name)); }),
-                                        overflowCount > 0 ? React.createElement(react_components_1.Caption1, { className: styles.siteSkillMore },
-                                            "+",
-                                            overflowCount,
-                                            " more") : null)));
-                            }) : React.createElement(react_components_1.Body1, { className: styles.chartNote }, "No sites or skills match the current filters."))),
-                        React.createElement(react_components_1.Card, { className: "".concat(styles.chartCard, " ").concat(styles.chartWide, " ").concat(styles.tableCard) },
-                            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites"), description: React.createElement(react_components_1.Caption1, null, "Search, sort, filter, and expand to inspect the skills on each site.") }),
-                            React.createElement(SitesTable_1.default, { sites: usagePageSites, skills: visibleSkills, selectedSiteId: usageSiteFilterId, onSelectSite: setUsageSiteFilterId, sortField: usageSortField, sortDirection: usageSortDirection, onSortChange: handleUsageSortChange }),
-                            React.createElement("div", { className: styles.paginationBar },
-                                React.createElement(react_components_1.Body1, null,
-                                    "Page ",
-                                    safeUsagePage,
-                                    " of ",
-                                    usagePageCount),
-                                React.createElement("div", { className: styles.toolbarActions },
-                                    React.createElement(react_components_1.Button, { appearance: "secondary", disabled: safeUsagePage <= 1, onClick: function () { return setUsagePage(function (page) { return Math.max(1, page - 1); }); } }, "Previous"),
-                                    React.createElement(react_components_1.Button, { appearance: "secondary", disabled: safeUsagePage >= usagePageCount, onClick: function () { return setUsagePage(function (page) { return Math.min(usagePageCount, page + 1); }); } }, "Next")))))))))));
+                usageSettingsOpen ? (React.createElement(react_components_1.Card, { className: styles.usagePanel },
+                    React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.usagePanelBody, styles.usagePanelBodyNoScroll) },
+                        React.createElement("div", { className: styles.filterPanelHeader },
+                            React.createElement("div", { className: styles.filterPanelTitle },
+                                React.createElement(react_components_1.Text, { weight: "semibold" }, "Full-width view settings"),
+                                React.createElement(react_components_1.Caption1, null, "Toggle and reorder the cards shown in the Usage dashboard.")),
+                            React.createElement(react_components_1.Button, { className: styles.filterPanelClose, appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close settings", onClick: function () { return setUsageSettingsOpen(false); } })),
+                        React.createElement("div", { className: styles.filterPanel }, usageCardOrder.map(function (key, index) {
+                            var definition = USAGE_CARD_DEFINITIONS.find(function (candidate) { return candidate.key === key; });
+                            var label = definition ? definition.label : key;
+                            return (React.createElement("div", { key: key, className: styles.cardOrderRow },
+                                React.createElement(react_components_1.Checkbox, { checked: usageCardVisibility[key], onChange: function (_, data) { return setUsageCardVisible(key, Boolean(data.checked)); }, label: label }),
+                                React.createElement("div", { className: styles.cardOrderActions },
+                                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: React.createElement(react_icons_1.ChevronUp16Regular, null), "aria-label": "Move ".concat(label, " up"), disabled: index === 0, onClick: function () { return moveUsageCard(key, -1); } }),
+                                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: React.createElement(react_icons_1.ChevronDown16Regular, null), "aria-label": "Move ".concat(label, " down"), disabled: index === usageCardOrder.length - 1, onClick: function () { return moveUsageCard(key, 1); } }))));
+                        }))))) : null,
+                createSkillOpen ? (React.createElement(react_components_1.Card, { className: styles.createPanel },
+                    createSkillSubmitting ? (React.createElement("div", { className: styles.createPanelOverlay },
+                        React.createElement(react_components_1.Spinner, { label: createSkillStatus || 'Creating skill…' }))) : null,
+                    React.createElement("div", { className: styles.createPanelBody },
+                        React.createElement("div", { className: styles.filterPanelHeader },
+                            React.createElement("div", { className: styles.filterPanelTitle },
+                                React.createElement(react_components_1.Text, { weight: "semibold" }, "Create Skill"),
+                                React.createElement(react_components_1.Caption1, null, "Create a new skill folder and SKILL.md in a selected site.")),
+                            React.createElement(react_components_1.Button, { className: styles.filterPanelClose, appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close create skill", disabled: createSkillSubmitting, onClick: function () { return setCreateSkillOpen(false); } })),
+                        createSkillError ? React.createElement(react_components_1.Body1, { className: styles.statusError }, createSkillError) : null,
+                        createSkillStatus && !createSkillSubmitting ? React.createElement(react_components_1.Body1, { className: styles.statusText }, createSkillStatus) : null,
+                        React.createElement("div", { className: styles.createPanelForm },
+                            React.createElement(react_components_1.Field, { className: styles.filterField, label: "Site", required: true },
+                                React.createElement("select", { className: styles.select, value: createSkillSiteId, disabled: createSkillSubmitting, onChange: function (event) { return setCreateSkillSiteId(event.target.value); } },
+                                    React.createElement("option", { value: "" }, "Select a site"),
+                                    props.sites.slice().sort(function (a, b) { return compareText(a.name, b.name); }).map(function (site) { return (React.createElement("option", { key: site.id, value: site.id }, site.name)); }))),
+                            React.createElement(react_components_1.Field, { className: styles.filterField, label: "Skill Name", required: true },
+                                React.createElement(react_components_1.Input, { value: createSkillName, disabled: createSkillSubmitting, onChange: function (_, data) { return setCreateSkillName(data.value); }, placeholder: 'Example: "Build HTML Dashboard!"' }),
+                                React.createElement(react_components_1.Caption1, null,
+                                    "Normalized folder name: ",
+                                    normalizedCreateSkillName || '—')),
+                            React.createElement(react_components_1.Field, { className: (0, react_components_1.mergeClasses)(styles.filterField, styles.createPanelFormFullWidth, styles.skillContentField), style: { width: 550, minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }, label: "Skill Content", required: true },
+                                React.createElement("div", { className: styles.skillContentEditor },
+                                    React.createElement(react_editor_1.Editor, { ref: skillContentEditorRef, initialValue: createSkillContent, previewStyle: "vertical", initialEditType: "wysiwyg", useCommandShortcut: true, placeholder: "Write the SKILL.md content\u2026", onChange: function () { var _a, _b; return setCreateSkillContent((_b = (_a = skillContentEditorRef.current) === null || _a === void 0 ? void 0 : _a.getInstance().getMarkdown()) !== null && _b !== void 0 ? _b : ''); } }))),
+                            React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.createPreview, styles.createPanelFormFullWidth) },
+                                React.createElement(react_components_1.Caption1, null,
+                                    "Folder path: ",
+                                    selectedCreateSkillSite ? "".concat(selectedCreateSkillSite.name, " / Agent Assets / skills / ").concat(normalizedCreateSkillName || 'skill-name') : 'Select a site to preview the path.'),
+                                React.createElement(react_components_1.Caption1, null,
+                                    "SKILL.md path: ",
+                                    selectedCreateSkillSite ? "".concat(selectedCreateSkillSite.name, " / Agent Assets / skills / ").concat(normalizedCreateSkillName || 'skill-name', " / SKILL.md") : 'Select a site to preview the path.')),
+                            React.createElement(react_components_1.Button, { className: styles.createPanelFormFullWidth, appearance: "primary", onClick: function () { void handleCreateSkillSubmit(); }, disabled: createSkillSubmitting || !createSkillName.trim() || !createSkillSiteId }, createSkillSubmitting ? 'Creating…' : 'Create Skill'))))) : null,
+                React.createElement("div", { className: styles.kpiGrid }, [
+                    ['Total Sites', visibleSites.length, 'Sites in the current view'],
+                    ['Total Skills', visibleSkills.length, 'Skills used by those sites'],
+                    ['Sites with Skills', visibleSitesWithSkills, 'Sites showing at least one skill'],
+                    ['Sites without Skills', visibleSitesWithoutSkills, 'Coverage gaps in the current view'],
+                    ['Average Skills / Site', visibleAverageSkillsPerSite.toFixed(1), 'Mean skills per visible site']
+                ].map(function (_a) {
+                    var label = _a[0], value = _a[1], hint = _a[2];
+                    return (React.createElement(react_components_1.Card, { key: String(label), className: styles.kpiCard },
+                        React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, label) }),
+                        React.createElement(react_components_1.Text, { size: 800, weight: "semibold", style: { color: react_components_1.tokens.colorBrandForeground1 } }, value),
+                        React.createElement(react_components_1.Caption1, null, hint)));
+                })),
+                React.createElement("div", { className: styles.chartGrid }, usageCardOrder.map(function (cardKey) {
+                    if (!usageCardVisibility[cardKey]) {
+                        return null;
+                    }
+                    switch (cardKey) {
+                        case 'skills-adoption':
+                            return (React.createElement(react_components_1.Card, { key: cardKey, className: styles.chartCard },
+                                React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skills ranked by site adoption"), description: React.createElement(react_components_1.Caption1, null, "Horizontal bars show how many visible sites use each skill.") }),
+                                React.createElement("div", { className: styles.chartList }, sortedUsageSkills.length ? sortedUsageSkills.map(function (skill) {
+                                    var count = skillCountById.get(skill.id) || 0;
+                                    var maxCount = Math.max.apply(Math, tslib_1.__spreadArray(tslib_1.__spreadArray([], Array.from(skillCountById.values()), false), [1], false));
+                                    return React.createElement("button", { key: skill.id, type: "button", className: styles.chartItem, onClick: function () { return setUsageSkillFilterId(skill.id); } },
+                                        React.createElement("div", { className: styles.chartItemHeader },
+                                            React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name),
+                                            React.createElement(react_components_1.Caption1, null,
+                                                count,
+                                                " site",
+                                                count === 1 ? '' : 's')),
+                                        React.createElement("div", { className: styles.chartTrack },
+                                            React.createElement("div", { className: styles.chartFill, style: { width: "".concat(Math.max(4, (count / maxCount) * 100), "%") } })));
+                                }) : React.createElement(react_components_1.Body1, { className: styles.chartNote }, "No skills match the current filters."))));
+                        case 'sites-with-vs-without':
+                            return (React.createElement(react_components_1.Card, { key: cardKey, className: styles.chartCard },
+                                React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites with vs. without skills"), description: React.createElement(react_components_1.Caption1, null, "Coverage and gap view for the current scope.") }),
+                                React.createElement("div", { className: styles.donutLayout },
+                                    React.createElement("svg", { viewBox: "0 0 160 160", className: styles.donutSvg, role: "img", "aria-label": "Sites with skills versus sites without skills" },
+                                        React.createElement("circle", { cx: "80", cy: "80", r: "54", fill: "none", stroke: react_components_1.tokens.colorNeutralBackground3, strokeWidth: "20" }),
+                                        visibleSites.length ? (function () {
+                                            var circumference = 2 * Math.PI * 54;
+                                            var withLength = circumference * (visibleSitesWithSkills / visibleSites.length);
+                                            var withoutLength = circumference - withLength;
+                                            return (React.createElement(React.Fragment, null,
+                                                React.createElement("circle", { cx: "80", cy: "80", r: "54", fill: "none", stroke: react_components_1.tokens.colorPaletteGreenForeground1, strokeWidth: "20", strokeDasharray: "".concat(withLength, " ").concat(circumference), transform: "rotate(-90 80 80)", onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'with-skills' ? 'all' : 'with-skills'); }); }, style: { cursor: 'pointer' } }),
+                                                React.createElement("circle", { cx: "80", cy: "80", r: "54", fill: "none", stroke: react_components_1.tokens.colorNeutralStroke1, strokeWidth: "20", strokeDasharray: "".concat(withoutLength, " ").concat(circumference), strokeDashoffset: -withLength, transform: "rotate(-90 80 80)", onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'without-skills' ? 'all' : 'without-skills'); }); }, style: { cursor: 'pointer' } })));
+                                        })() : null,
+                                        React.createElement("text", { x: "80", y: "75", textAnchor: "middle", fontSize: "20", fill: react_components_1.tokens.colorNeutralForeground1, fontWeight: 600 }, visibleSites.length),
+                                        React.createElement("text", { x: "80", y: "96", textAnchor: "middle", fontSize: "11", fill: react_components_1.tokens.colorNeutralForeground3 }, "sites")),
+                                    React.createElement(react_components_1.Caption1, { className: styles.donutCaption }, "Click a segment to filter sites with or without skills."),
+                                    React.createElement("div", { className: styles.donutLegend },
+                                        React.createElement("button", { type: "button", className: styles.donutButton, onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'with-skills' ? 'all' : 'with-skills'); }); } },
+                                            React.createElement("span", { className: styles.legendLeft },
+                                                React.createElement("span", { className: (0, react_components_1.mergeClasses)(styles.legendSwatch, styles.legendGreen) }),
+                                                React.createElement("span", null,
+                                                    React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites with skills"))),
+                                            React.createElement(react_components_1.Caption1, null, visibleSites.length ? "".concat(Math.round((visibleSitesWithSkills / visibleSites.length) * 100), "%") : '0%')),
+                                        React.createElement("button", { type: "button", className: styles.donutButton, onClick: function () { return setUsageCoverageFilter(function (current) { return (current === 'without-skills' ? 'all' : 'without-skills'); }); } },
+                                            React.createElement("span", { className: styles.legendLeft },
+                                                React.createElement("span", { className: (0, react_components_1.mergeClasses)(styles.legendSwatch, styles.legendGray) }),
+                                                React.createElement("span", null,
+                                                    React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites without skills"))),
+                                            React.createElement(react_components_1.Caption1, null, visibleSites.length ? "".concat(Math.round((visibleSitesWithoutSkills / visibleSites.length) * 100), "%") : '0%'))))));
+                        case 'skill-distribution':
+                            return (React.createElement(react_components_1.Card, { key: cardKey, className: styles.chartCard },
+                                React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skill distribution"), description: React.createElement(react_components_1.Caption1, null, "How many skills each visible site has, grouped into bands.") }),
+                                React.createElement("div", { className: styles.distributionList }, skillDistributionBuckets.map(function (bucket) {
+                                    var percentage = visibleSites.length ? Math.round((bucket.count / visibleSites.length) * 100) : 0;
+                                    return (React.createElement("div", { key: bucket.label, className: styles.distributionRow },
+                                        React.createElement(react_components_1.Text, { weight: "semibold" }, bucket.label),
+                                        React.createElement("div", { className: styles.distributionTrack },
+                                            React.createElement("div", { className: styles.distributionFill, style: { width: bucket.count > 0 ? "".concat(Math.max(4, percentage), "%") : '0%' } }),
+                                            React.createElement("div", { className: styles.distributionTrackLabel },
+                                                percentage,
+                                                "%")),
+                                        React.createElement("div", { className: styles.distributionMeta },
+                                            React.createElement(react_components_1.Text, { weight: "semibold" }, bucket.count))));
+                                }))));
+                        case 'sites':
+                            return (React.createElement(react_components_1.Card, { key: cardKey, className: (0, react_components_1.mergeClasses)(styles.chartCard, styles.tableCard) },
+                                React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Sites"), description: React.createElement(react_components_1.Caption1, null, "Search, filter, and select a site to inspect its skills.") }),
+                                React.createElement("div", { className: styles.usageViewport },
+                                    React.createElement(SitesTable_1.default, { sites: usagePageSites, skills: visibleSkills, selectedSiteId: usageSiteFilterId, onSelectSite: setUsageSiteFilterId, sortField: usageSortField, sortDirection: usageSortDirection, onSortChange: handleUsageSortChange })),
+                                React.createElement("div", { className: styles.paginationBar },
+                                    React.createElement(react_components_1.Body1, null,
+                                        "Page ",
+                                        safeUsagePage,
+                                        " of ",
+                                        usagePageCount),
+                                    React.createElement("div", { className: styles.toolbarActions },
+                                        React.createElement(react_components_1.Button, { appearance: "secondary", disabled: safeUsagePage <= 1, onClick: function () { return setUsagePage(function (page) { return Math.max(1, page - 1); }); } }, "Previous"),
+                                        React.createElement(react_components_1.Button, { appearance: "secondary", disabled: safeUsagePage >= usagePageCount, onClick: function () { return setUsagePage(function (page) { return Math.min(usagePageCount, page + 1); }); } }, "Next")))));
+                        default:
+                            return null;
+                    }
+                })))))));
 }
 //# sourceMappingURL=SkillsFactoryDashboard.js.map

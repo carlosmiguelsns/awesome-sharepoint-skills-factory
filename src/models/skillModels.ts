@@ -26,6 +26,7 @@ export interface Skill {
   skillMarkdownCreatedDate?: string;
   skillMarkdownModifiedDate?: string;
   skillMarkdownSize?: number;
+  rawContent?: string;
 }
 
 export interface SharePointSite {
@@ -41,6 +42,7 @@ export interface SharePointSite {
   template: string;
   hasAgentAssetsLibrary?: boolean;
   agentAssetsItemCount?: number;
+  agentAssetsRootFolderUrl?: string;
 }
 
 export interface SiteCollection {

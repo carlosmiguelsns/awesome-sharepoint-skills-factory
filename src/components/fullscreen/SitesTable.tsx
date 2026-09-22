@@ -8,6 +8,7 @@ import type { SharePointSite, Skill } from '../../models';
 const useStyles = makeStyles({
   table: {
     width: '100%',
+    minWidth: '840px',
     borderCollapse: 'collapse'
   },
   headerCell: {
@@ -27,14 +28,20 @@ const useStyles = makeStyles({
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
     verticalAlign: 'top'
   },
-  expandCell: {
-    width: '1%',
-    paddingRight: 0
+  actionsCell: {
+    textAlign: 'right',
+    whiteSpace: 'nowrap'
   },
   siteName: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalXXS
+  },
+  statusHas: {
+    color: tokens.colorPaletteGreenForeground1
+  },
+  statusNone: {
+    color: tokens.colorNeutralForeground3
   },
   detailsRow: {
     backgroundColor: tokens.colorNeutralBackground2
@@ -128,15 +135,9 @@ export default function SitesTable(props: ISitesTableProps): React.ReactElement 
     <table className={styles.table}>
       <thead>
         <tr>
-          <th className={`${styles.headerCell} ${styles.expandCell}`} />
           <th className={styles.headerCell}>
             <Button appearance="subtle" size="small" icon={sortIconFor('site')} onClick={() => props.onSortChange('site')}>
               Site
-            </Button>
-          </th>
-          <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('collection')} onClick={() => props.onSortChange('collection')}>
-              Site collection
             </Button>
           </th>
           <th className={styles.headerCell} style={{ textAlign: 'right' }}>
@@ -144,6 +145,8 @@ export default function SitesTable(props: ISitesTableProps): React.ReactElement 
               Skills
             </Button>
           </th>
+          <th className={styles.headerCell}>Coverage</th>
+          <th className={`${styles.headerCell} ${styles.actionsCell}`}>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -151,35 +154,43 @@ export default function SitesTable(props: ISitesTableProps): React.ReactElement 
           const isSelected: boolean = props.selectedSiteId === site.id;
           const isExpanded: boolean = expandedSiteIds.has(site.id);
           const siteSkills: Skill[] = skillsForSite(site.id);
+          const skillCount: number = skillCountForSite(site.id);
+          const hasSkills: boolean = skillCount > 0;
 
           return (
             <React.Fragment key={site.id}>
               <tr className={`${styles.row} ${isSelected ? styles.selectedRow : ''}`} onClick={() => props.onSelectSite(site.id)}>
-                <td className={`${styles.cell} ${styles.expandCell}`}>
-                  <Button
-                    appearance="subtle"
-                    size="small"
-                    icon={isExpanded ? <ChevronDown24Regular /> : <ChevronRight24Regular />}
-                    onClick={(event: React.MouseEvent): void => {
-                      event.stopPropagation();
-                      toggleExpanded(site.id);
-                    }}
-                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${site.name}`}
-                  />
-                </td>
                 <td className={styles.cell}>
                   <div className={styles.siteName}>
                     <Text weight="semibold">{site.name}</Text>
                     <Caption1>{site.webUrl || site.url}</Caption1>
                   </div>
                 </td>
-                <td className={styles.cell}>
-                  <Caption1>{site.siteCollectionName || '—'}</Caption1>
-                </td>
                 <td className={styles.cell} style={{ textAlign: 'right' }}>
                   <Badge appearance="outline" color="informative">
-                    {skillCountForSite(site.id)}
+                    {skillCount}
                   </Badge>
+                </td>
+                <td className={styles.cell}>
+                  <Text weight="semibold" className={hasSkills ? styles.statusHas : styles.statusNone}>
+                    {hasSkills ? 'Has skills' : 'No skills'}
+                  </Text>
+                </td>
+                <td className={`${styles.cell} ${styles.actionsCell}`}>
+                  <Button
+                    appearance="secondary"
+                    size="small"
+                    icon={isExpanded ? <ChevronDown24Regular /> : <ChevronRight24Regular />}
+                    iconPosition="after"
+                    onClick={(event: React.MouseEvent): void => {
+                      event.stopPropagation();
+                      props.onSelectSite(site.id);
+                      toggleExpanded(site.id);
+                    }}
+                    aria-label={`${isExpanded ? 'Hide' : 'View'} skills for ${site.name}`}
+                  >
+                    View
+                  </Button>
                 </td>
               </tr>
               {isExpanded ? (

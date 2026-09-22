@@ -1,6 +1,6 @@
 import type { Skill } from '../models';
 import type { MSGraphClientFactory, SPHttpClient } from '@microsoft/sp-http';
-import { TenantSharePointDataService } from './TenantSharePointDataService';
+import { TenantSharePointDataService, type ICreateSkillRequest, type ICreateSkillResult } from './TenantSharePointDataService';
 
 export interface ISkillQuery {
   searchText?: string;
@@ -67,5 +67,21 @@ export class SkillService {
   public async getSkillById(skillId: string): Promise<Skill | undefined> {
     const allSkills: Skill[] = await this.getAllSkillsAsync();
     return allSkills.find((skill: Skill) => skill.id === skillId);
+  }
+
+  public async createSkill(request: ICreateSkillRequest): Promise<ICreateSkillResult> {
+    if (!this.spHttpClient || !this.siteUrl) {
+      throw new Error('SharePoint create support is not available.');
+    }
+
+    const tenantService: TenantSharePointDataService = new TenantSharePointDataService(
+      this.spHttpClient,
+      this.siteUrl,
+      this.msGraphClientFactory,
+      this.currentUserName,
+      this.currentUserEmail
+    );
+
+    return tenantService.createSkillAsync(request);
   }
 }

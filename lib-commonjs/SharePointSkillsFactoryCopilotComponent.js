@@ -23,21 +23,10 @@ var SharePointSkillsFactoryCopilotComponent = /** @class */ (function (_super) {
             currentUserName: currentUserName,
             currentUserEmail: currentUserEmail,
             targetDocument: this.context.domElement.ownerDocument,
-            inputQuery: this.properties.inputQuery,
             onRequestFullscreen: function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
                 return tslib_1.__generator(this, function (_a) {
                     switch (_a.label) {
                         case 0: return [4 /*yield*/, this.requestDisplayModeAsync('fullscreen')];
-                        case 1:
-                            _a.sent();
-                            return [2 /*return*/];
-                    }
-                });
-            }); },
-            onRequestInline: function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-                return tslib_1.__generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0: return [4 /*yield*/, this.requestDisplayModeAsync('inline')];
                         case 1:
                             _a.sent();
                             return [2 /*return*/];

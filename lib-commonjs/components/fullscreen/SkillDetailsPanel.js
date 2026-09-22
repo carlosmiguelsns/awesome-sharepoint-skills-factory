@@ -4,6 +4,8 @@ exports.default = SkillDetailsPanel;
 var tslib_1 = require("tslib");
 var React = tslib_1.__importStar(require("react"));
 var react_components_1 = require("@fluentui/react-components");
+var react_editor_1 = require("@toast-ui/react-editor");
+require("@toast-ui/editor/dist/toastui-editor.css");
 var dateHelpers_1 = require("../../utils/dateHelpers");
 var useStyles = (0, react_components_1.makeStyles)({
     root: {
@@ -96,6 +98,15 @@ var useStyles = (0, react_components_1.makeStyles)({
     siteMetaValue: {
         display: 'block',
         lineHeight: react_components_1.tokens.lineHeightBase300
+    },
+    previewSurface: {
+        border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        overflow: 'hidden'
+    },
+    previewEmpty: {
+        color: react_components_1.tokens.colorNeutralForeground3,
+        padding: react_components_1.tokens.spacingVerticalM
     }
 });
 function formatBytes(size) {
@@ -117,6 +128,10 @@ function formatBytes(size) {
 function SkillDetailsPanel(props) {
     var styles = useStyles();
     var skill = props.skill;
+    var _a = React.useState(false), isPreviewOpen = _a[0], setIsPreviewOpen = _a[1];
+    React.useEffect(function () {
+        setIsPreviewOpen(false);
+    }, [skill === null || skill === void 0 ? void 0 : skill.id]);
     if (!skill) {
         return (React.createElement(react_components_1.Card, null,
             React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skill details"), description: React.createElement(react_components_1.Body1, null, "Select a skill to inspect its usage.") })));
@@ -125,6 +140,14 @@ function SkillDetailsPanel(props) {
     var siteCollectionForSite = React.useCallback(function (site) { return props.siteCollections.find(function (collection) { return collection.id === site.siteCollectionId; }); }, [props.siteCollections]);
     return (React.createElement(react_components_1.Card, null,
         React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name), description: React.createElement(react_components_1.Body1, null, skill.description) }),
+        React.createElement(react_components_1.Dialog, { open: isPreviewOpen, onOpenChange: function (_, data) { return setIsPreviewOpen(data.open); } },
+            React.createElement(react_components_1.DialogSurface, null,
+                React.createElement(react_components_1.DialogBody, null,
+                    React.createElement(react_components_1.DialogTitle, null, skill.skillMarkdownFileName || 'SKILL.md'),
+                    React.createElement(react_components_1.DialogContent, null, skill.rawContent ? (React.createElement("div", { className: styles.previewSurface },
+                        React.createElement(react_editor_1.Viewer, { key: skill.id, initialValue: skill.rawContent }))) : (React.createElement(react_components_1.Body1, { className: styles.previewEmpty }, "No content available to preview for this skill."))),
+                    React.createElement(react_components_1.DialogActions, null,
+                        React.createElement(react_components_1.Button, { appearance: "secondary", onClick: function () { return setIsPreviewOpen(false); } }, "Close"))))),
         React.createElement("div", { className: styles.root },
             React.createElement("div", { className: styles.section },
                 React.createElement(react_components_1.Caption1, null, "Sites where this skill exists"),
@@ -148,7 +171,7 @@ function SkillDetailsPanel(props) {
                             React.createElement("div", { className: styles.siteMetaGroup },
                                 React.createElement(react_components_1.Caption1, { className: styles.metaLabel }, "Skill file"),
                                 React.createElement(react_components_1.Body1, { className: styles.siteMetaValue },
-                                    React.createElement(react_components_1.Link, { href: skill.skillMarkdownUrl || skill.sourceDocumentUrl || site.url, target: "_blank", rel: "noreferrer" }, skill.skillMarkdownFileName || 'SKILL.md')),
+                                    React.createElement(react_components_1.Link, { onClick: function () { return setIsPreviewOpen(true); } }, skill.skillMarkdownFileName || 'SKILL.md')),
                                 React.createElement(react_components_1.Caption1, null,
                                     "Creator ",
                                     skill.isOwnedByCurrentUser ? props.currentUserName : skill.owner),

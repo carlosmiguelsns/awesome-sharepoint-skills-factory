@@ -1,10 +1,10 @@
 import * as React from 'react';
 
 import { Body1, Button, Caption1, Persona, Text, makeStyles, tokens } from '@fluentui/react-components';
-import { CheckmarkCircle24Filled, ChevronDown24Regular, ChevronUp24Regular, ChevronUpDown24Regular } from '@fluentui/react-icons';
+import { ChevronDown24Regular, ChevronUp24Regular, ChevronUpDown24Regular } from '@fluentui/react-icons';
 
-import type { SiteCollection, Skill } from '../../models';
-import { formatRelativeDate } from '../../utils/dateHelpers';
+import type { Skill } from '../../models';
+import { formatLongDate } from '../../utils/dateHelpers';
 
 const useStyles = makeStyles({
   table: {
@@ -27,14 +27,6 @@ const useStyles = makeStyles({
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
     verticalAlign: 'top'
   },
-  statusCell: {
-    width: '1%',
-    paddingRight: 0
-  },
-  statusIcon: {
-    color: tokens.colorPaletteGreenForeground1,
-    marginTop: tokens.spacingVerticalXS
-  },
   skillName: {
     display: 'flex',
     flexDirection: 'column',
@@ -42,14 +34,14 @@ const useStyles = makeStyles({
   }
 });
 
-type SortField = 'skill' | 'owner' | 'collection' | 'modified';
+type SortField = 'skill' | 'owner' | 'created' | 'modifiedBy' | 'modifiedDate';
 type SortDirection = 'ascending' | 'descending';
 
 export interface ISkillsTableProps {
   skills: Skill[];
-  siteCollections: SiteCollection[];
   selectedSkillId?: string;
   onSelectSkill: (skillId: string) => void;
+  currentUserName: string;
 }
 
 export default function SkillsTable(props: ISkillsTableProps): React.ReactElement {
@@ -57,16 +49,15 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
   const [sortField, setSortField] = React.useState<SortField>('skill');
   const [sortDirection, setSortDirection] = React.useState<SortDirection>('ascending');
 
-  const collectionNameForSkill = React.useCallback(
-    (skill: Skill): string => {
-      const firstCollectionId: string | undefined = skill.siteCollectionIds[0];
-      const collection: SiteCollection | undefined = props.siteCollections.find((item: SiteCollection) => item.id === firstCollectionId);
-      return collection ? collection.name : '—';
-    },
-    [props.siteCollections]
+  const getOwnerName = React.useCallback(
+    (skill: Skill): string => (skill.isOwnedByCurrentUser ? props.currentUserName || skill.owner : skill.owner),
+    [props.currentUserName]
   );
 
-  const getOwnerName = React.useCallback((skill: Skill): string => (skill.isOwnedByCurrentUser ? 'You' : skill.owner), []);
+  const getModifiedByName = React.useCallback(
+    (skill: Skill): string => (skill.isOwnedByCurrentUser ? props.currentUserName || skill.owner : skill.owner),
+    [props.currentUserName]
+  );
 
   const sortedSkills: Skill[] = React.useMemo(() => {
     const items: Skill[] = props.skills.slice();
@@ -78,17 +69,19 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
         comparison = compareText(left.name, right.name);
       } else if (sortField === 'owner') {
         comparison = compareText(getOwnerName(left), getOwnerName(right));
-      } else if (sortField === 'collection') {
-        comparison = compareText(collectionNameForSkill(left), collectionNameForSkill(right));
+      } else if (sortField === 'created') {
+        comparison = compareText(left.skillMarkdownCreatedDate || left.createdDate, right.skillMarkdownCreatedDate || right.createdDate);
+      } else if (sortField === 'modifiedBy') {
+        comparison = compareText(getModifiedByName(left), getModifiedByName(right));
       } else {
-        comparison = left.modifiedDate.localeCompare(right.modifiedDate);
+        comparison = compareText(left.skillMarkdownModifiedDate || left.modifiedDate, right.skillMarkdownModifiedDate || right.modifiedDate);
       }
 
       return sortDirection === 'ascending' ? comparison : -comparison;
     });
 
     return items;
-  }, [collectionNameForSkill, getOwnerName, props.skills, sortDirection, sortField]);
+  }, [getOwnerName, props.skills, sortDirection, sortField]);
 
   const requestSort = React.useCallback(
     (field: SortField): void => {
@@ -98,7 +91,7 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
       }
 
       setSortField(field);
-      setSortDirection(field === 'modified' ? 'descending' : 'ascending');
+      setSortDirection(field === 'modifiedDate' ? 'descending' : 'ascending');
     },
     [sortField]
   );
@@ -118,7 +111,6 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
     <table className={styles.table}>
       <thead>
         <tr>
-          <th className={styles.headerCell} />
           <th className={styles.headerCell}>
             <Button appearance="subtle" size="small" icon={sortIconFor('skill')} onClick={() => requestSort('skill')}>
               Skill
@@ -130,13 +122,18 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
             </Button>
           </th>
           <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('collection')} onClick={() => requestSort('collection')}>
-              Site Collection
+            <Button appearance="subtle" size="small" icon={sortIconFor('created')} onClick={() => requestSort('created')}>
+              Created Date
             </Button>
           </th>
           <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('modified')} onClick={() => requestSort('modified')}>
-              Modified
+            <Button appearance="subtle" size="small" icon={sortIconFor('modifiedBy')} onClick={() => requestSort('modifiedBy')}>
+              Modified by
+            </Button>
+          </th>
+          <th className={styles.headerCell}>
+            <Button appearance="subtle" size="small" icon={sortIconFor('modifiedDate')} onClick={() => requestSort('modifiedDate')}>
+              Modified date
             </Button>
           </th>
         </tr>
@@ -150,9 +147,6 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
               className={`${styles.row} ${isSelected ? styles.selectedRow : ''}`}
               onClick={() => props.onSelectSkill(skill.id)}
             >
-              <td className={`${styles.cell} ${styles.statusCell}`}>
-                {isSelected ? <CheckmarkCircle24Filled className={styles.statusIcon} /> : null}
-              </td>
               <td className={styles.cell}>
                 <div className={styles.skillName}>
                   <Text weight="semibold">{skill.name}</Text>
@@ -160,13 +154,16 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
                 </div>
               </td>
               <td className={styles.cell}>
-                <Persona name={skill.owner} secondaryText={skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner'} size="small" />
+                <Persona name={getOwnerName(skill)} secondaryText={skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner'} size="small" />
               </td>
               <td className={styles.cell}>
-                <Caption1>{collectionNameForSkill(skill)}</Caption1>
+                <Caption1>{formatLongDate(skill.skillMarkdownCreatedDate || skill.createdDate)}</Caption1>
               </td>
               <td className={styles.cell}>
-                <Caption1>{formatRelativeDate(skill.modifiedDate)}</Caption1>
+                <Caption1>{getModifiedByName(skill)}</Caption1>
+              </td>
+              <td className={styles.cell}>
+                <Caption1>{formatLongDate(skill.skillMarkdownModifiedDate || skill.modifiedDate)}</Caption1>
               </td>
             </tr>
           );

@@ -18,6 +18,7 @@ import { SkillService } from '../services/SkillService';
 import { SiteService } from '../services/SiteService';
 import InlineSkillsView from './inline/InlineSkillsView';
 import SkillsFactoryDashboard, { type DashboardTab } from './fullscreen/SkillsFactoryDashboard';
+import type { ICreateSkillRequest } from '../services/TenantSharePointDataService';
 
 const useStyles = makeStyles({
   root: {
@@ -40,9 +41,7 @@ export interface ISkillsFactoryAppProps {
   currentUserName: string;
   currentUserEmail: string;
   targetDocument?: Document;
-  inputQuery?: string;
   onRequestFullscreen: () => Promise<void>;
-  onRequestInline: () => Promise<void>;
 }
 
 export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.ReactElement {
@@ -66,25 +65,14 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
   const [sites, setSites] = React.useState<SharePointSite[]>([]);
   const [siteCollections, setSiteCollections] = React.useState<SiteCollection[]>([]);
   const [selectedSkillId, setSelectedSkillId] = React.useState<string | undefined>(undefined);
-  const [inlineMode, setInlineMode] = React.useState<'my-skills' | 'skill-usage'>('my-skills');
   const [activeTab, setActiveTab] = React.useState<DashboardTab>(
-    props.hostContext.displayMode === 'fullscreen' ? 'all-skills' : 'my-skills'
+    'all-skills'
   );
   const [searchText, setSearchText] = React.useState<string>('');
   const [siteSearchText, setSiteSearchText] = React.useState<string>('');
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [discoveredSiteCount, setDiscoveredSiteCount] = React.useState<number>(0);
   const [loadingMessage, setLoadingMessage] = React.useState<string>('Loading skills factory…');
-
-  const requestedSkillName: string = React.useMemo(() => {
-    const query: string = (props.inputQuery || '').trim();
-    const match: RegExpMatchArray | null =
-      query.match(/^where is\s+(.+?)\s+skill\s+used\??$/i) ||
-      query.match(/^where is\s+(.+?)\s+used\??$/i) ||
-      query.match(/where is\s+(.+?)\s+skill used/i) ||
-      query.match(/where is\s+(.+?)\s+used/i);
-    return match ? match[1].trim().replace(/^the\s+/i, '') : '';
-  }, [props.inputQuery]);
 
   React.useEffect(() => {
     let isCancelled: boolean = false;
@@ -138,14 +126,10 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     };
   }, [siteService, skillService]);
 
-  React.useEffect(() => {
-    if (props.hostContext.displayMode === 'inline') {
-      const query: string = (props.inputQuery || '').trim().toLowerCase();
-      const isUsageQuery: boolean = query.startsWith('where is ') || query.includes(' where is ') || query.includes(' used?');
-      setInlineMode(isUsageQuery ? 'skill-usage' : 'my-skills');
-      setActiveTab('my-skills');
-    }
-  }, [props.hostContext.displayMode, props.inputQuery]);
+  const refreshSkills = React.useCallback(async (): Promise<void> => {
+    const allSkills: Skill[] = await skillService.getSkills({ ownedOnly: false });
+    setSkills(allSkills);
+  }, [skillService]);
 
   const mySkills: Skill[] = React.useMemo(
     () => skills.filter((skill: Skill) => skill.isOwnedByCurrentUser),
@@ -161,21 +145,6 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     [mySkills]
   );
 
-  const filteredMySkills: Skill[] = React.useMemo(() => {
-    const source: Skill[] = mySkills;
-    const needle: string = searchText.trim().toLowerCase();
-
-    return source.filter((skill: Skill) => {
-      const matchesSearch: boolean = !needle
-        ? true
-        : [skill.name, skill.description, skill.owner, skill.knowledgeSources.join(' '), skill.suggestedPrompts.join(' ')]
-            .join(' ')
-            .toLowerCase()
-            .indexOf(needle) !== -1;
-      return matchesSearch;
-    });
-  }, [mySkills, searchText]);
-
   const filteredAllSkills: Skill[] = React.useMemo(() => {
     const needle: string = searchText.trim().toLowerCase();
 
@@ -190,7 +159,7 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     });
   }, [searchText, skills]);
 
-  const visibleSkills: Skill[] = activeTab === 'my-skills' ? filteredMySkills : filteredAllSkills;
+  const visibleSkills: Skill[] = filteredAllSkills;
 
   React.useEffect(() => {
     if (visibleSkills.length === 0) {
@@ -207,33 +176,6 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     [selectedSkillId, skills]
   );
 
-  const requestedUsageSkill: Skill | undefined = React.useMemo(() => {
-    if (!requestedSkillName) {
-      return undefined;
-    }
-
-    const normalized: string = requestedSkillName.toLowerCase();
-    const normalizedCompact: string = normalized.replace(/\s+/g, '');
-    return (
-      skills.find((skill: Skill) => skill.name.toLowerCase() === normalized) ||
-      skills.find((skill: Skill) => skill.name.toLowerCase().includes(normalized)) ||
-      skills.find((skill: Skill) => skill.name.toLowerCase().replace(/\s+/g, '') === normalizedCompact)
-    );
-  }, [requestedSkillName, skills]);
-
-  const requestedUsageSites: SharePointSite[] = React.useMemo(() => {
-    if (!requestedUsageSkill) {
-      return [];
-    }
-
-    return sites.filter((site: SharePointSite) => requestedUsageSkill.siteIds.indexOf(site.id) !== -1);
-  }, [requestedUsageSkill, sites]);
-
-  const handleCollapse = React.useCallback(async (): Promise<void> => {
-    setActiveTab('my-skills');
-    await props.onRequestInline();
-  }, [props.onRequestInline]);
-
   const theme = props.hostContext.theme === 'dark' ? webDarkTheme : webLightTheme;
 
   return (
@@ -245,16 +187,10 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
           </div>
         ) : props.hostContext.displayMode === 'inline' ? (
           <InlineSkillsView
-            mode={inlineMode}
-            skills={inlineMode === 'skill-usage' ? filteredAllSkills : topMySkills}
-            selectedSkill={selectedSkill}
-            usageSkillName={requestedUsageSkill?.name}
-            sites={inlineMode === 'skill-usage' ? requestedUsageSites : sites}
-            usageSiteCount={inlineMode === 'skill-usage' ? requestedUsageSites.length : undefined}
-            siteCollections={siteCollections}
+            skills={topMySkills}
             onSelectSkill={setSelectedSkillId}
             onExpand={async (): Promise<void> => {
-              setActiveTab(inlineMode === 'skill-usage' ? 'all-skills' : 'my-skills');
+              setActiveTab('all-skills');
               await props.onRequestFullscreen();
             }}
           />
@@ -262,7 +198,6 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
           <SkillsFactoryDashboard
             hostContext={props.hostContext}
             targetDocument={props.targetDocument}
-            inputQuery={props.inputQuery}
             currentUserName={props.currentUserName}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -270,14 +205,18 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             onSearchTextChange={setSearchText}
             siteSearchText={siteSearchText}
             onSiteSearchTextChange={setSiteSearchText}
-            mySkills={filteredMySkills}
-            allSkills={filteredAllSkills}
+            allSkills={skills}
             usageSkills={skills}
             siteCollections={siteCollections}
             sites={sites}
             selectedSkill={selectedSkill}
             onSelectSkill={setSelectedSkillId}
             onSelectSite={(_: string) => undefined}
+            onCreateSkill={async (request: ICreateSkillRequest) => {
+              const result = await skillService.createSkill(request);
+              await refreshSkills();
+              return result;
+            }}
             onRequestFullscreen={props.onRequestFullscreen}
           />
         )}

@@ -82,6 +82,18 @@ var SkillService = /** @class */ (function () {
             });
         });
     };
+    SkillService.prototype.createSkill = function (request) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var tenantService;
+            return tslib_1.__generator(this, function (_a) {
+                if (!this.spHttpClient || !this.siteUrl) {
+                    throw new Error('SharePoint create support is not available.');
+                }
+                tenantService = new TenantSharePointDataService_1.TenantSharePointDataService(this.spHttpClient, this.siteUrl, this.msGraphClientFactory, this.currentUserName, this.currentUserEmail);
+                return [2 /*return*/, tenantService.createSkillAsync(request)];
+            });
+        });
+    };
     return SkillService;
 }());
 exports.SkillService = SkillService;

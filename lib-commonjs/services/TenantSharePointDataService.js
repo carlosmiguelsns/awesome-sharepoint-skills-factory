@@ -24,6 +24,9 @@ function getFileNameWithoutExtension(fileName) {
 function normalizeKey(value) {
     return (0, textHelpers_1.normalizeSearch)(value).replace(/\s+/g, ' ');
 }
+function escapeODataString(value) {
+    return value.replace(/'/g, "''");
+}
 function toAbsoluteUrl(siteUrl, serverRelativeUrl) {
     if (/^https?:\/\//i.test(serverRelativeUrl)) {
         return serverRelativeUrl;
@@ -123,7 +126,7 @@ var TenantSharePointDataService = /** @class */ (function () {
     };
     TenantSharePointDataService.prototype.getTenantSkillsAsync = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var currentUser, sites, skillsByKey, _i, sites_2, site, skillFiles, _a, skillFiles_1, skillFile, markdown, skillName, skillKey, siteIds, collectionIds, existing, nextSkill;
+            var currentUser, sites, skillsByKey, _i, sites_2, site, skillsRootServerRelativeUrl, skillFiles, _a, skillFiles_1, skillFile, markdown, skillName, skillKey, siteIds, collectionIds, existing, nextSkill;
             var _b, _c;
             return tslib_1.__generator(this, function (_d) {
                 switch (_d.label) {
@@ -139,10 +142,11 @@ var TenantSharePointDataService = /** @class */ (function () {
                     case 3:
                         if (!(_i < sites_2.length)) return [3 /*break*/, 9];
                         site = sites_2[_i];
-                        if (!site.hasAgentAssetsLibrary) {
+                        if (!site.hasAgentAssetsLibrary || !site.agentAssetsRootFolderUrl) {
                             return [3 /*break*/, 8];
                         }
-                        return [4 /*yield*/, this.getSkillMarkdownFilesAsync(site.url)];
+                        skillsRootServerRelativeUrl = "".concat(site.agentAssetsRootFolderUrl.replace(/\/$/, ''), "/skills");
+                        return [4 /*yield*/, this.getSkillMarkdownFilesAsync(site.url, skillsRootServerRelativeUrl)];
                     case 4:
                         skillFiles = _d.sent();
                         _a = 0, skillFiles_1 = skillFiles;
@@ -189,7 +193,8 @@ var TenantSharePointDataService = /** @class */ (function () {
                             skillMarkdownUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
                             skillMarkdownCreatedDate: skillFile.TimeCreated,
                             skillMarkdownModifiedDate: skillFile.TimeLastModified,
-                            skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined
+                            skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined,
+                            rawContent: markdown
                         };
                         skillsByKey.set(skillKey, nextSkill);
                         _d.label = 7;
@@ -200,6 +205,54 @@ var TenantSharePointDataService = /** @class */ (function () {
                         _i++;
                         return [3 /*break*/, 3];
                     case 9: return [2 /*return*/, Array.from(skillsByKey.values()).sort(function (left, right) { return right.usageCount - left.usageCount; })];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.createSkillAsync = function (request) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var reportProgress, normalizedSkillName, libraryInfo, skillsRootServerRelativeUrl, existingFolderNames, skillFolderServerRelativeUrl;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        reportProgress = function (message) { var _a; return (_a = request.onProgress) === null || _a === void 0 ? void 0 : _a.call(request, message); };
+                        normalizedSkillName = (0, textHelpers_1.normalizeSkillFolderName)(request.skillName);
+                        if (!normalizedSkillName) {
+                            throw new Error('Skill name must contain at least one letter or number.');
+                        }
+                        reportProgress('Locating the Agent Assets library…');
+                        return [4 /*yield*/, this.getAgentAssetsLibraryAsync(request.siteUrl)];
+                    case 1:
+                        libraryInfo = _a.sent();
+                        if (!libraryInfo) {
+                            throw new Error('Agent Assets library was not found on the selected site.');
+                        }
+                        skillsRootServerRelativeUrl = "".concat(libraryInfo.rootFolderServerRelativeUrl.replace(/\/$/, ''), "/skills");
+                        reportProgress('Preparing the skills folder…');
+                        return [4 /*yield*/, this.ensureFolderExistsAsync(request.siteUrl, libraryInfo.rootFolderServerRelativeUrl, 'skills')];
+                    case 2:
+                        _a.sent();
+                        return [4 /*yield*/, this.getChildFolderNamesAsync(request.siteUrl, skillsRootServerRelativeUrl)];
+                    case 3:
+                        existingFolderNames = _a.sent();
+                        if (existingFolderNames.indexOf(normalizedSkillName) !== -1) {
+                            throw new Error("A skill folder named \"".concat(normalizedSkillName, "\" already exists."));
+                        }
+                        skillFolderServerRelativeUrl = "".concat(skillsRootServerRelativeUrl, "/").concat(normalizedSkillName);
+                        reportProgress("Creating skill folder \"".concat(normalizedSkillName, "\"\u2026"));
+                        return [4 /*yield*/, this.createFolderAsync(request.siteUrl, skillsRootServerRelativeUrl, normalizedSkillName)];
+                    case 4:
+                        _a.sent();
+                        reportProgress('Uploading SKILL.md…');
+                        return [4 /*yield*/, this.createTextFileAsync(request.siteUrl, skillFolderServerRelativeUrl, 'SKILL.md', request.skillContent)];
+                    case 5:
+                        _a.sent();
+                        reportProgress('Finalizing…');
+                        return [2 /*return*/, {
+                                normalizedSkillName: normalizedSkillName,
+                                skillFolderUrl: "".concat(request.siteUrl.replace(/\/$/, ''), "/").concat(skillFolderServerRelativeUrl.replace(/^\//, '')),
+                                skillMarkdownUrl: "".concat(request.siteUrl.replace(/\/$/, ''), "/").concat(skillFolderServerRelativeUrl.replace(/^\//, ''), "/SKILL.md")
+                            }];
                 }
             });
         });
@@ -265,10 +318,10 @@ var TenantSharePointDataService = /** @class */ (function () {
                     case 2:
                         if (!(_i < sites_3.length)) return [3 /*break*/, 5];
                         site = sites_3[_i];
-                        return [4 /*yield*/, this.tryGetAgentAssetsLibraryAsync(site.url)];
+                        return [4 /*yield*/, this.getAgentAssetsLibraryAsync(site.url)];
                     case 3:
                         libraryInfo = _a.sent();
-                        validated.push(tslib_1.__assign(tslib_1.__assign({}, site), { hasAgentAssetsLibrary: Boolean(libraryInfo), agentAssetsItemCount: libraryInfo ? libraryInfo.itemCount : 0 }));
+                        validated.push(tslib_1.__assign(tslib_1.__assign({}, site), { hasAgentAssetsLibrary: Boolean(libraryInfo), agentAssetsItemCount: libraryInfo ? libraryInfo.itemCount : 0, agentAssetsRootFolderUrl: libraryInfo === null || libraryInfo === void 0 ? void 0 : libraryInfo.rootFolderServerRelativeUrl }));
                         _a.label = 4;
                     case 4:
                         _i++;
@@ -278,34 +331,132 @@ var TenantSharePointDataService = /** @class */ (function () {
             });
         });
     };
-    TenantSharePointDataService.prototype.tryGetAgentAssetsLibraryAsync = function (siteUrl) {
+    TenantSharePointDataService.prototype.getAgentAssetsLibraryAsync = function (siteUrl) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var response, data;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/lists/GetByTitle('Agent Assets')?$select=Id,Title,ItemCount"), sp_http_1.SPHttpClient.configurations.v1)];
+            var response, data, rootFolderServerRelativeUrl;
+            var _a;
+            return tslib_1.__generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/lists/GetByTitle('Agent Assets')?$select=Id,Title,ItemCount,RootFolder/ServerRelativeUrl&$expand=RootFolder"), sp_http_1.SPHttpClient.configurations.v1)];
                     case 1:
-                        response = _a.sent();
+                        response = _b.sent();
                         if (!response.ok) {
                             return [2 /*return*/, undefined];
                         }
                         return [4 /*yield*/, response.json()];
                     case 2:
-                        data = (_a.sent());
+                        data = (_b.sent());
+                        rootFolderServerRelativeUrl = (_a = data.RootFolder) === null || _a === void 0 ? void 0 : _a.ServerRelativeUrl;
+                        if (!rootFolderServerRelativeUrl) {
+                            return [2 /*return*/, undefined];
+                        }
                         return [2 /*return*/, {
-                                itemCount: data.ItemCount || 0
+                                itemCount: data.ItemCount || 0,
+                                rootFolderServerRelativeUrl: rootFolderServerRelativeUrl
                             }];
                 }
             });
         });
     };
-    TenantSharePointDataService.prototype.getSkillMarkdownFilesAsync = function (siteUrl) {
+    TenantSharePointDataService.prototype.ensureFolderExistsAsync = function (siteUrl, parentFolderServerRelativeUrl, folderName) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var response, data, folders, skillFiles, _i, folders_1, folder, folderName, fileResponse, fileData, files, skillFile;
+            var folderResponse, createResponse;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString("".concat(parentFolderServerRelativeUrl, "/").concat(folderName)), "')?$select=ServerRelativeUrl"), sp_http_1.SPHttpClient.configurations.v1)];
+                    case 1:
+                        folderResponse = _a.sent();
+                        if (folderResponse.ok) {
+                            return [2 /*return*/];
+                        }
+                        return [4 /*yield*/, this.spHttpClient.post("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(parentFolderServerRelativeUrl), "')/Folders/add('").concat(escapeODataString(folderName), "')"), sp_http_1.SPHttpClient.configurations.v1, {
+                                headers: {
+                                    Accept: 'application/json;odata=nometadata',
+                                    'Content-Type': 'application/json;odata=nometadata'
+                                }
+                            })];
+                    case 2:
+                        createResponse = _a.sent();
+                        if (!createResponse.ok) {
+                            throw new Error("Failed to create the \"".concat(folderName, "\" folder in the Agent Assets library."));
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.createFolderAsync = function (siteUrl, parentFolderServerRelativeUrl, folderName) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var createResponse;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.post("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(parentFolderServerRelativeUrl), "')/Folders/add('").concat(escapeODataString(folderName), "')"), sp_http_1.SPHttpClient.configurations.v1, {
+                            headers: {
+                                Accept: 'application/json;odata=nometadata',
+                                'Content-Type': 'application/json;odata=nometadata'
+                            }
+                        })];
+                    case 1:
+                        createResponse = _a.sent();
+                        if (!createResponse.ok) {
+                            throw new Error("Failed to create the skill folder \"".concat(folderName, "\"."));
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.createTextFileAsync = function (siteUrl, folderServerRelativeUrl, fileName, content) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var createResponse;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.post("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(folderServerRelativeUrl), "')/Files/add(url='").concat(escapeODataString(fileName), "',overwrite=true)"), sp_http_1.SPHttpClient.configurations.v1, {
+                            body: content,
+                            headers: {
+                                Accept: 'application/json;odata=nometadata',
+                                'Content-Type': 'text/plain;charset=utf-8'
+                            }
+                        })];
+                    case 1:
+                        createResponse = _a.sent();
+                        if (!createResponse.ok) {
+                            throw new Error('Failed to create SKILL.md.');
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.getChildFolderNamesAsync = function (siteUrl, folderServerRelativeUrl) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var response, data;
+            var _a;
+            return tslib_1.__generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(folderServerRelativeUrl), "')/Folders?$select=Name,ServerRelativeUrl"), sp_http_1.SPHttpClient.configurations.v1)];
+                    case 1:
+                        response = _b.sent();
+                        if (!response.ok) {
+                            return [2 /*return*/, []];
+                        }
+                        return [4 /*yield*/, response.json()];
+                    case 2:
+                        data = (_b.sent());
+                        return [2 /*return*/, (data.value || ((_a = data.d) === null || _a === void 0 ? void 0 : _a.results) || [])
+                                .map(function (folder) { return (folder.Name || '').trim(); })
+                                .filter(function (name) { return Boolean(name); })];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.getSkillMarkdownFilesAsync = function (siteUrl, skillsRootServerRelativeUrl) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var response, data, folders, skillFiles, _i, folders_1, folder, folderName, folderServerRelativeUrl, fileResponse, fileData, files, skillFile;
             var _a, _b;
             return tslib_1.__generator(this, function (_c) {
                 switch (_c.label) {
-                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('AgentAssets/Skills')/Folders?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,ItemCount"), sp_http_1.SPHttpClient.configurations.v1)];
+                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(skillsRootServerRelativeUrl), "')/Folders?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,ItemCount"), sp_http_1.SPHttpClient.configurations.v1)];
                     case 1:
                         response = _c.sent();
                         if (!response.ok) {
@@ -325,7 +476,8 @@ var TenantSharePointDataService = /** @class */ (function () {
                         if (!folderName) {
                             return [3 /*break*/, 6];
                         }
-                        return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('AgentAssets/Skills/").concat(folderName, "')/Files?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,Length"), sp_http_1.SPHttpClient.configurations.v1)];
+                        folderServerRelativeUrl = folder.ServerRelativeUrl || "".concat(skillsRootServerRelativeUrl, "/").concat(folderName);
+                        return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(folderServerRelativeUrl), "')/Files?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,Length"), sp_http_1.SPHttpClient.configurations.v1)];
                     case 4:
                         fileResponse = _c.sent();
                         if (!fileResponse.ok) {
@@ -337,7 +489,7 @@ var TenantSharePointDataService = /** @class */ (function () {
                         files = fileData.value || ((_b = fileData.d) === null || _b === void 0 ? void 0 : _b.results) || [];
                         skillFile = files.find(function (file) { return (file.Name || '').toLowerCase() === 'skill.md'; });
                         if (skillFile) {
-                            skillFiles.push(tslib_1.__assign(tslib_1.__assign({}, skillFile), { ServerRelativeUrl: skillFile.ServerRelativeUrl || "".concat(folder.ServerRelativeUrl || "AgentAssets/Skills/".concat(folderName), "/Skill.md"), folderName: folderName, folderServerRelativeUrl: folder.ServerRelativeUrl || "AgentAssets/Skills/".concat(folderName), folderCreatedDate: folder.TimeCreated, folderModifiedDate: folder.TimeLastModified }));
+                            skillFiles.push(tslib_1.__assign(tslib_1.__assign({}, skillFile), { ServerRelativeUrl: skillFile.ServerRelativeUrl || "".concat(folderServerRelativeUrl, "/Skill.md"), folderName: folderName, folderServerRelativeUrl: folderServerRelativeUrl, folderCreatedDate: folder.TimeCreated, folderModifiedDate: folder.TimeLastModified }));
                         }
                         _c.label = 6;
                     case 6:

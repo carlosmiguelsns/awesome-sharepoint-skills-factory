@@ -1,6 +1,24 @@
 import * as React from 'react';
 
-import { Body1, Card, CardHeader, Caption1, Link, Text, makeStyles, tokens } from '@fluentui/react-components';
+import {
+  Body1,
+  Button,
+  Card,
+  CardHeader,
+  Caption1,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  Link,
+  Text,
+  makeStyles,
+  tokens
+} from '@fluentui/react-components';
+import { Viewer } from '@toast-ui/react-editor';
+import '@toast-ui/editor/dist/toastui-editor.css';
 
 import type { SharePointSite, SiteCollection, Skill } from '../../models';
 import { formatLongDate } from '../../utils/dateHelpers';
@@ -96,6 +114,15 @@ const useStyles = makeStyles({
   siteMetaValue: {
     display: 'block',
     lineHeight: tokens.lineHeightBase300
+  },
+  previewSurface: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    overflow: 'hidden'
+  },
+  previewEmpty: {
+    color: tokens.colorNeutralForeground3,
+    padding: tokens.spacingVerticalM
   }
 });
 
@@ -130,6 +157,11 @@ export interface ISkillDetailsPanelProps {
 export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React.ReactElement {
   const styles = useStyles();
   const skill: Skill | undefined = props.skill;
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    setIsPreviewOpen(false);
+  }, [skill?.id]);
 
   if (!skill) {
     return (
@@ -150,6 +182,26 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
         header={<Text weight="semibold">{skill.name}</Text>}
         description={<Body1>{skill.description}</Body1>}
       />
+
+      <Dialog open={isPreviewOpen} onOpenChange={(_, data) => setIsPreviewOpen(data.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>{skill.skillMarkdownFileName || 'SKILL.md'}</DialogTitle>
+            <DialogContent>
+              {skill.rawContent ? (
+                <div className={styles.previewSurface}>
+                  <Viewer key={skill.id} initialValue={skill.rawContent} />
+                </div>
+              ) : (
+                <Body1 className={styles.previewEmpty}>No content available to preview for this skill.</Body1>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
 
       <div className={styles.root}>
         <div className={styles.section}>
@@ -179,7 +231,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
                     <div className={styles.siteMetaGroup}>
                       <Caption1 className={styles.metaLabel}>Skill file</Caption1>
                       <Body1 className={styles.siteMetaValue}>
-                        <Link href={skill.skillMarkdownUrl || skill.sourceDocumentUrl || site.url} target="_blank" rel="noreferrer">
+                        <Link onClick={() => setIsPreviewOpen(true)}>
                           {skill.skillMarkdownFileName || 'SKILL.md'}
                         </Link>
                       </Body1>

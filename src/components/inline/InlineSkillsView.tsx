@@ -1,8 +1,8 @@
 import * as React from 'react';
 
-import { Body1, Card, Link, Text, makeStyles, tokens } from '@fluentui/react-components';
+import { Body1, Link, Text, makeStyles, tokens } from '@fluentui/react-components';
 
-import type { SharePointSite, SiteCollection, Skill } from '../../models';
+import type { Skill } from '../../models';
 import InlineSkillsList from './InlineSkillsList';
 
 const useStyles = makeStyles({
@@ -26,29 +26,13 @@ const useStyles = makeStyles({
   },
   helper: {
     color: tokens.colorNeutralForeground3
-  },
-  usageList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalS
-  },
-  usageItem: {
-    padding: tokens.spacingVerticalS
-  },
-  emptyState: {
-    color: tokens.colorNeutralForeground3
   }
 });
 
 export interface IInlineSkillsViewProps {
-  mode: 'my-skills' | 'skill-usage';
   skills: Skill[];
-  selectedSkill?: Skill;
-  usageSkillName?: string;
-  usageSiteCount?: number;
-  sites: SharePointSite[];
-  siteCollections: SiteCollection[];
   onSelectSkill: (skillId: string) => void;
+  onExpand: () => Promise<void>;
 }
 
 export default function InlineSkillsView(props: IInlineSkillsViewProps): React.ReactElement {
@@ -58,35 +42,13 @@ export default function InlineSkillsView(props: IInlineSkillsViewProps): React.R
     <div className={styles.root}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <Text size={500} weight="semibold">{props.mode === 'skill-usage' ? 'Skill usage' : 'My Skills'}</Text>
-          <Body1 className={styles.helper}>
-            {props.mode === 'skill-usage'
-              ? `Sites using ${props.usageSkillName || 'the requested skill'} (${props.usageSiteCount || 0}).`
-              : 'A compact view of your top 5 skills used.'}
-          </Body1>
+          <Text size={500} weight="semibold">My Skills</Text>
+          <Body1 className={styles.helper}>A compact view of your top 5 skills used.</Body1>
         </div>
+        <Link onClick={(): void => { void props.onExpand(); }}>Expand</Link>
       </div>
 
-      {props.mode === 'skill-usage' ? (
-        props.sites.length > 0 ? (
-          <div className={styles.usageList}>
-            {props.sites.map((site: SharePointSite) => (
-              <Card key={site.id} className={styles.usageItem}>
-                <Text weight="semibold">{site.name}</Text>
-                <Body1>
-                  <Link href={site.webUrl || site.url} target="_blank" rel="noreferrer">
-                    {site.webUrl || site.url}
-                  </Link>
-                </Body1>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Body1 className={styles.emptyState}>No sites found for this skill.</Body1>
-        )
-      ) : (
-        <InlineSkillsList skills={props.skills} onSelectSkill={props.onSelectSkill} />
-      )}
+      <InlineSkillsList skills={props.skills} onSelectSkill={props.onSelectSkill} />
     </div>
   );
 }

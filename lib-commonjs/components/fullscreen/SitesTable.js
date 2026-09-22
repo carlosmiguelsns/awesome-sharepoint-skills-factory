@@ -8,6 +8,7 @@ var react_icons_1 = require("@fluentui/react-icons");
 var useStyles = (0, react_components_1.makeStyles)({
     table: {
         width: '100%',
+        minWidth: '840px',
         borderCollapse: 'collapse'
     },
     headerCell: {
@@ -27,14 +28,20 @@ var useStyles = (0, react_components_1.makeStyles)({
         padding: "".concat(react_components_1.tokens.spacingVerticalS, " ").concat(react_components_1.tokens.spacingHorizontalS),
         verticalAlign: 'top'
     },
-    expandCell: {
-        width: '1%',
-        paddingRight: 0
+    actionsCell: {
+        textAlign: 'right',
+        whiteSpace: 'nowrap'
     },
     siteName: {
         display: 'flex',
         flexDirection: 'column',
         gap: react_components_1.tokens.spacingVerticalXXS
+    },
+    statusHas: {
+        color: react_components_1.tokens.colorPaletteGreenForeground1
+    },
+    statusNone: {
+        color: react_components_1.tokens.colorNeutralForeground3
     },
     detailsRow: {
         backgroundColor: react_components_1.tokens.colorNeutralBackground2
@@ -99,32 +106,34 @@ function SitesTable(props) {
     return (React.createElement("table", { className: styles.table },
         React.createElement("thead", null,
             React.createElement("tr", null,
-                React.createElement("th", { className: "".concat(styles.headerCell, " ").concat(styles.expandCell) }),
                 React.createElement("th", { className: styles.headerCell },
                     React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('site'), onClick: function () { return props.onSortChange('site'); } }, "Site")),
-                React.createElement("th", { className: styles.headerCell },
-                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('collection'), onClick: function () { return props.onSortChange('collection'); } }, "Site collection")),
                 React.createElement("th", { className: styles.headerCell, style: { textAlign: 'right' } },
-                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('skills'), onClick: function () { return props.onSortChange('skills'); } }, "Skills")))),
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor('skills'), onClick: function () { return props.onSortChange('skills'); } }, "Skills")),
+                React.createElement("th", { className: styles.headerCell }, "Coverage"),
+                React.createElement("th", { className: "".concat(styles.headerCell, " ").concat(styles.actionsCell) }, "Actions"))),
         React.createElement("tbody", null, props.sites.map(function (site) {
             var isSelected = props.selectedSiteId === site.id;
             var isExpanded = expandedSiteIds.has(site.id);
             var siteSkills = skillsForSite(site.id);
+            var skillCount = skillCountForSite(site.id);
+            var hasSkills = skillCount > 0;
             return (React.createElement(React.Fragment, { key: site.id },
                 React.createElement("tr", { className: "".concat(styles.row, " ").concat(isSelected ? styles.selectedRow : ''), onClick: function () { return props.onSelectSite(site.id); } },
-                    React.createElement("td", { className: "".concat(styles.cell, " ").concat(styles.expandCell) },
-                        React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: isExpanded ? React.createElement(react_icons_1.ChevronDown24Regular, null) : React.createElement(react_icons_1.ChevronRight24Regular, null), onClick: function (event) {
-                                event.stopPropagation();
-                                toggleExpanded(site.id);
-                            }, "aria-label": "".concat(isExpanded ? 'Collapse' : 'Expand', " ").concat(site.name) })),
                     React.createElement("td", { className: styles.cell },
                         React.createElement("div", { className: styles.siteName },
                             React.createElement(react_components_1.Text, { weight: "semibold" }, site.name),
                             React.createElement(react_components_1.Caption1, null, site.webUrl || site.url))),
-                    React.createElement("td", { className: styles.cell },
-                        React.createElement(react_components_1.Caption1, null, site.siteCollectionName || '—')),
                     React.createElement("td", { className: styles.cell, style: { textAlign: 'right' } },
-                        React.createElement(react_components_1.Badge, { appearance: "outline", color: "informative" }, skillCountForSite(site.id)))),
+                        React.createElement(react_components_1.Badge, { appearance: "outline", color: "informative" }, skillCount)),
+                    React.createElement("td", { className: styles.cell },
+                        React.createElement(react_components_1.Text, { weight: "semibold", className: hasSkills ? styles.statusHas : styles.statusNone }, hasSkills ? 'Has skills' : 'No skills')),
+                    React.createElement("td", { className: "".concat(styles.cell, " ").concat(styles.actionsCell) },
+                        React.createElement(react_components_1.Button, { appearance: "secondary", size: "small", icon: isExpanded ? React.createElement(react_icons_1.ChevronDown24Regular, null) : React.createElement(react_icons_1.ChevronRight24Regular, null), iconPosition: "after", onClick: function (event) {
+                                event.stopPropagation();
+                                props.onSelectSite(site.id);
+                                toggleExpanded(site.id);
+                            }, "aria-label": "".concat(isExpanded ? 'Hide' : 'View', " skills for ").concat(site.name) }, "View"))),
                 isExpanded ? (React.createElement("tr", { className: styles.detailsRow },
                     React.createElement("td", { className: styles.detailsCell, colSpan: 4 },
                         React.createElement("div", { className: styles.detailsHeader },

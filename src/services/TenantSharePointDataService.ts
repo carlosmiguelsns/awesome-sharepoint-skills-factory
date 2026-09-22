@@ -1,7 +1,7 @@
 import { type MSGraphClientFactory, type MSGraphClientV3, SPHttpClient, type SPHttpClientResponse } from '@microsoft/sp-http';
 
 import type { SharePointSite, SiteCollection, Skill } from '../models';
-import { normalizeSearch } from '../utils/textHelpers';
+import { normalizeSearch, normalizeSkillFolderName } from '../utils/textHelpers';
 
 interface ISharePointFolder {
   Name?: string;
@@ -26,6 +26,19 @@ interface ISharePointSkillFile extends ISharePointFile {
   folderServerRelativeUrl?: string;
   folderCreatedDate?: string;
   folderModifiedDate?: string;
+}
+
+export interface ICreateSkillRequest {
+  siteUrl: string;
+  skillName: string;
+  skillContent: string;
+  onProgress?: (message: string) => void;
+}
+
+export interface ICreateSkillResult {
+  normalizedSkillName: string;
+  skillFolderUrl: string;
+  skillMarkdownUrl: string;
 }
 
 interface IGraphMeResponse {
@@ -62,6 +75,10 @@ function getFileNameWithoutExtension(fileName: string): string {
 
 function normalizeKey(value: string): string {
   return normalizeSearch(value).replace(/\s+/g, ' ');
+}
+
+function escapeODataString(value: string): string {
+  return value.replace(/'/g, "''");
 }
 
 function toAbsoluteUrl(siteUrl: string, serverRelativeUrl: string): string {
@@ -154,11 +171,12 @@ export class TenantSharePointDataService {
     const skillsByKey: Map<string, Skill> = new Map();
 
     for (const site of sites) {
-      if (!site.hasAgentAssetsLibrary) {
+      if (!site.hasAgentAssetsLibrary || !site.agentAssetsRootFolderUrl) {
         continue;
       }
 
-      const skillFiles: ISharePointSkillFile[] = await this.getSkillMarkdownFilesAsync(site.url);
+      const skillsRootServerRelativeUrl: string = `${site.agentAssetsRootFolderUrl.replace(/\/$/, '')}/skills`;
+      const skillFiles: ISharePointSkillFile[] = await this.getSkillMarkdownFilesAsync(site.url, skillsRootServerRelativeUrl);
       for (const skillFile of skillFiles) {
         const markdown: string = await this.getMarkdownFileContentAsync(site.url, skillFile.ServerRelativeUrl || '');
         const skillName: string = getTitle(markdown, getFileNameWithoutExtension(skillFile.Name || 'Skill'));
@@ -199,7 +217,8 @@ export class TenantSharePointDataService {
           skillMarkdownUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
           skillMarkdownCreatedDate: skillFile.TimeCreated,
           skillMarkdownModifiedDate: skillFile.TimeLastModified,
-          skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined
+          skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined,
+          rawContent: markdown
         };
 
         skillsByKey.set(skillKey, nextSkill);
@@ -207,6 +226,44 @@ export class TenantSharePointDataService {
     }
 
     return Array.from(skillsByKey.values()).sort((left: Skill, right: Skill) => right.usageCount - left.usageCount);
+  }
+
+  public async createSkillAsync(request: ICreateSkillRequest): Promise<ICreateSkillResult> {
+    const reportProgress = (message: string): void => request.onProgress?.(message);
+
+    const normalizedSkillName: string = normalizeSkillFolderName(request.skillName);
+    if (!normalizedSkillName) {
+      throw new Error('Skill name must contain at least one letter or number.');
+    }
+
+    reportProgress('Locating the Agent Assets library…');
+    const libraryInfo: { rootFolderServerRelativeUrl: string } | undefined = await this.getAgentAssetsLibraryAsync(request.siteUrl);
+    if (!libraryInfo) {
+      throw new Error('Agent Assets library was not found on the selected site.');
+    }
+
+    const skillsRootServerRelativeUrl: string = `${libraryInfo.rootFolderServerRelativeUrl.replace(/\/$/, '')}/skills`;
+    reportProgress('Preparing the skills folder…');
+    await this.ensureFolderExistsAsync(request.siteUrl, libraryInfo.rootFolderServerRelativeUrl, 'skills');
+
+    const existingFolderNames: string[] = await this.getChildFolderNamesAsync(request.siteUrl, skillsRootServerRelativeUrl);
+    if (existingFolderNames.indexOf(normalizedSkillName) !== -1) {
+      throw new Error(`A skill folder named "${normalizedSkillName}" already exists.`);
+    }
+
+    const skillFolderServerRelativeUrl: string = `${skillsRootServerRelativeUrl}/${normalizedSkillName}`;
+    reportProgress(`Creating skill folder "${normalizedSkillName}"…`);
+    await this.createFolderAsync(request.siteUrl, skillsRootServerRelativeUrl, normalizedSkillName);
+
+    reportProgress('Uploading SKILL.md…');
+    await this.createTextFileAsync(request.siteUrl, skillFolderServerRelativeUrl, 'SKILL.md', request.skillContent);
+
+    reportProgress('Finalizing…');
+    return {
+      normalizedSkillName,
+      skillFolderUrl: `${request.siteUrl.replace(/\/$/, '')}/${skillFolderServerRelativeUrl.replace(/^\//, '')}`,
+      skillMarkdownUrl: `${request.siteUrl.replace(/\/$/, '')}/${skillFolderServerRelativeUrl.replace(/^\//, '')}/SKILL.md`
+    };
   }
 
   private async getTenantSitesAsync(): Promise<SharePointSite[]> {
@@ -253,20 +310,21 @@ export class TenantSharePointDataService {
     const validated: SharePointSite[] = [];
 
     for (const site of sites) {
-      const libraryInfo: { itemCount: number } | undefined = await this.tryGetAgentAssetsLibraryAsync(site.url);
+      const libraryInfo: { itemCount: number; rootFolderServerRelativeUrl: string } | undefined = await this.getAgentAssetsLibraryAsync(site.url);
       validated.push({
         ...site,
         hasAgentAssetsLibrary: Boolean(libraryInfo),
-        agentAssetsItemCount: libraryInfo ? libraryInfo.itemCount : 0
+        agentAssetsItemCount: libraryInfo ? libraryInfo.itemCount : 0,
+        agentAssetsRootFolderUrl: libraryInfo?.rootFolderServerRelativeUrl
       });
     }
 
     return validated;
   }
 
-  private async tryGetAgentAssetsLibraryAsync(siteUrl: string): Promise<{ itemCount: number } | undefined> {
+  private async getAgentAssetsLibraryAsync(siteUrl: string): Promise<{ itemCount: number; rootFolderServerRelativeUrl: string } | undefined> {
     const response: SPHttpClientResponse = await this.spHttpClient.get(
-      `${siteUrl}/_api/web/lists/GetByTitle('Agent Assets')?$select=Id,Title,ItemCount`,
+      `${siteUrl}/_api/web/lists/GetByTitle('Agent Assets')?$select=Id,Title,ItemCount,RootFolder/ServerRelativeUrl&$expand=RootFolder`,
       SPHttpClient.configurations.v1
     );
 
@@ -274,15 +332,101 @@ export class TenantSharePointDataService {
       return undefined;
     }
 
-    const data: { ItemCount?: number } = (await response.json()) as { ItemCount?: number };
+    const data: { ItemCount?: number; RootFolder?: { ServerRelativeUrl?: string } } = (await response.json()) as { ItemCount?: number; RootFolder?: { ServerRelativeUrl?: string } };
+    const rootFolderServerRelativeUrl: string | undefined = data.RootFolder?.ServerRelativeUrl;
+    if (!rootFolderServerRelativeUrl) {
+      return undefined;
+    }
+
     return {
-      itemCount: data.ItemCount || 0
+      itemCount: data.ItemCount || 0,
+      rootFolderServerRelativeUrl
     };
   }
 
-  private async getSkillMarkdownFilesAsync(siteUrl: string): Promise<ISharePointSkillFile[]> {
+  private async ensureFolderExistsAsync(siteUrl: string, parentFolderServerRelativeUrl: string, folderName: string): Promise<void> {
+    const folderResponse: SPHttpClientResponse = await this.spHttpClient.get(
+      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(`${parentFolderServerRelativeUrl}/${folderName}`)}')?$select=ServerRelativeUrl`,
+      SPHttpClient.configurations.v1
+    );
+
+    if (folderResponse.ok) {
+      return;
+    }
+
+    const createResponse: SPHttpClientResponse = await this.spHttpClient.post(
+      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(parentFolderServerRelativeUrl)}')/Folders/add('${escapeODataString(folderName)}')`,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          Accept: 'application/json;odata=nometadata',
+          'Content-Type': 'application/json;odata=nometadata'
+        }
+      }
+    );
+
+    if (!createResponse.ok) {
+      throw new Error(`Failed to create the "${folderName}" folder in the Agent Assets library.`);
+    }
+  }
+
+  private async createFolderAsync(siteUrl: string, parentFolderServerRelativeUrl: string, folderName: string): Promise<void> {
+    const createResponse: SPHttpClientResponse = await this.spHttpClient.post(
+      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(parentFolderServerRelativeUrl)}')/Folders/add('${escapeODataString(folderName)}')`,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          Accept: 'application/json;odata=nometadata',
+          'Content-Type': 'application/json;odata=nometadata'
+        }
+      }
+    );
+
+    if (!createResponse.ok) {
+      throw new Error(`Failed to create the skill folder "${folderName}".`);
+    }
+  }
+
+  private async createTextFileAsync(siteUrl: string, folderServerRelativeUrl: string, fileName: string, content: string): Promise<void> {
+    const createResponse: SPHttpClientResponse = await this.spHttpClient.post(
+      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(folderServerRelativeUrl)}')/Files/add(url='${escapeODataString(fileName)}',overwrite=true)`,
+      SPHttpClient.configurations.v1,
+      {
+        body: content,
+        headers: {
+          Accept: 'application/json;odata=nometadata',
+          'Content-Type': 'text/plain;charset=utf-8'
+        }
+      }
+    );
+
+    if (!createResponse.ok) {
+      throw new Error('Failed to create SKILL.md.');
+    }
+  }
+
+  private async getChildFolderNamesAsync(siteUrl: string, folderServerRelativeUrl: string): Promise<string[]> {
     const response: SPHttpClientResponse = await this.spHttpClient.get(
-      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('AgentAssets/Skills')/Folders?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,ItemCount`,
+      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(folderServerRelativeUrl)}')/Folders?$select=Name,ServerRelativeUrl`,
+      SPHttpClient.configurations.v1
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data: { value?: ISharePointFolder[]; d?: { results?: ISharePointFolder[] } } = (await response.json()) as {
+      value?: ISharePointFolder[];
+      d?: { results?: ISharePointFolder[] };
+    };
+    return (data.value || data.d?.results || [])
+      .map((folder: ISharePointFolder) => (folder.Name || '').trim())
+      .filter((name: string) => Boolean(name));
+  }
+
+  private async getSkillMarkdownFilesAsync(siteUrl: string, skillsRootServerRelativeUrl: string): Promise<ISharePointSkillFile[]> {
+    const response: SPHttpClientResponse = await this.spHttpClient.get(
+      `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(skillsRootServerRelativeUrl)}')/Folders?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,ItemCount`,
       SPHttpClient.configurations.v1
     );
 
@@ -303,8 +447,9 @@ export class TenantSharePointDataService {
         continue;
       }
 
+      const folderServerRelativeUrl: string = folder.ServerRelativeUrl || `${skillsRootServerRelativeUrl}/${folderName}`;
       const fileResponse: SPHttpClientResponse = await this.spHttpClient.get(
-        `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('AgentAssets/Skills/${folderName}')/Files?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,Length`,
+        `${siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(folderServerRelativeUrl)}')/Files?$select=Name,ServerRelativeUrl,TimeCreated,TimeLastModified,Length`,
         SPHttpClient.configurations.v1
       );
 
@@ -321,9 +466,9 @@ export class TenantSharePointDataService {
       if (skillFile) {
         skillFiles.push({
           ...skillFile,
-          ServerRelativeUrl: skillFile.ServerRelativeUrl || `${folder.ServerRelativeUrl || `AgentAssets/Skills/${folderName}`}/Skill.md`,
+          ServerRelativeUrl: skillFile.ServerRelativeUrl || `${folderServerRelativeUrl}/Skill.md`,
           folderName,
-          folderServerRelativeUrl: folder.ServerRelativeUrl || `AgentAssets/Skills/${folderName}`,
+          folderServerRelativeUrl,
           folderCreatedDate: folder.TimeCreated,
           folderModifiedDate: folder.TimeLastModified
         });
