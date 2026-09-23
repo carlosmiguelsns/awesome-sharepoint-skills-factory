@@ -110,28 +110,10 @@ function SkillsFactoryApp(props) {
             .sort(function (left, right) { return right.usageCount - left.usageCount || right.modifiedDate.localeCompare(left.modifiedDate); })
             .slice(0, 5);
     }, [mySkills]);
-    var filteredAllSkills = React.useMemo(function () {
-        var needle = searchText.trim().toLowerCase();
-        return skills.filter(function (skill) {
-            var matchesSearch = !needle
-                ? true
-                : [skill.name, skill.description, skill.owner, skill.knowledgeSources.join(' '), skill.suggestedPrompts.join(' ')]
-                    .join(' ')
-                    .toLowerCase()
-                    .indexOf(needle) !== -1;
-            return matchesSearch;
-        });
-    }, [searchText, skills]);
-    var visibleSkills = filteredAllSkills;
-    React.useEffect(function () {
-        if (visibleSkills.length === 0) {
-            return;
-        }
-        if (!selectedSkillId || !visibleSkills.some(function (skill) { return skill.id === selectedSkillId; })) {
-            setSelectedSkillId(visibleSkills[0].id);
-        }
-    }, [visibleSkills, selectedSkillId]);
     var selectedSkill = React.useMemo(function () { return skills.find(function (skill) { return skill.id === selectedSkillId; }); }, [selectedSkillId, skills]);
+    var handleToggleSelectSkill = React.useCallback(function (skillId) {
+        setSelectedSkillId(function (current) { return (current === skillId ? undefined : skillId); });
+    }, []);
     var theme = props.hostContext.theme === 'dark' ? react_components_1.webDarkTheme : react_components_1.webLightTheme;
     return (React.createElement(react_components_1.IdPrefixProvider, { value: "sharepoint-skills-factory-" },
         React.createElement(react_components_1.FluentProvider, { theme: theme, targetDocument: props.targetDocument, className: styles.root }, isLoading ? (React.createElement("div", { className: styles.loading },
@@ -146,7 +128,7 @@ function SkillsFactoryApp(props) {
                             return [2 /*return*/];
                     }
                 });
-            }); } })) : (React.createElement(SkillsFactoryDashboard_1.default, { hostContext: props.hostContext, targetDocument: props.targetDocument, currentUserName: props.currentUserName, activeTab: activeTab, onTabChange: setActiveTab, searchText: searchText, onSearchTextChange: setSearchText, siteSearchText: siteSearchText, onSiteSearchTextChange: setSiteSearchText, allSkills: skills, usageSkills: skills, siteCollections: siteCollections, sites: sites, selectedSkill: selectedSkill, onSelectSkill: setSelectedSkillId, onSelectSite: function (_) { return undefined; }, onCreateSkill: function (request) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+            }); } })) : (React.createElement(SkillsFactoryDashboard_1.default, { hostContext: props.hostContext, targetDocument: props.targetDocument, currentUserName: props.currentUserName, activeTab: activeTab, onTabChange: setActiveTab, searchText: searchText, onSearchTextChange: setSearchText, siteSearchText: siteSearchText, onSiteSearchTextChange: setSiteSearchText, allSkills: skills, usageSkills: skills, siteCollections: siteCollections, sites: sites, selectedSkill: selectedSkill, onSelectSkill: handleToggleSelectSkill, onSelectSite: function (_) { return undefined; }, onCreateSkill: function (request) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
                 var result;
                 return tslib_1.__generator(this, function (_a) {
                     switch (_a.label) {

@@ -19,6 +19,18 @@ var useStyles = (0, react_components_1.makeStyles)({
         gap: react_components_1.tokens.spacingVerticalXXS
     }
 });
+// Deliberately omits `idealWidth`: Fluent's column resizing treats an explicit idealWidth as
+// authoritative and re-applies it whenever the `columns` array is recreated (e.g. on every
+// re-render), which would wipe out any width the user drags. Leaving it unset lets the resize
+// state fall back to the user's last dragged width instead.
+var SKILLS_TABLE_COLUMN_SIZING_OPTIONS = {
+    skill: { minWidth: 160, defaultWidth: 240 },
+    owner: { minWidth: 140, defaultWidth: 180 },
+    created: { minWidth: 120, defaultWidth: 150 },
+    modifiedBy: { minWidth: 140, defaultWidth: 160 },
+    modifiedDate: { minWidth: 120, defaultWidth: 150 },
+    sites: { minWidth: 80, defaultWidth: 100 }
+};
 function SkillsTable(props) {
     var styles = useStyles();
     var _a = React.useState('skill'), sortField = _a[0], setSortField = _a[1];
@@ -64,13 +76,12 @@ function SkillsTable(props) {
         return sortDirection === 'ascending' ? React.createElement(react_icons_1.ChevronUp24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null);
     }, [sortDirection, sortField]);
     var sortHeaderButton = React.useCallback(function (field, label) { return (React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: sortIconFor(field), onClick: function () { return requestSort(field); } }, label)); }, [requestSort, sortIconFor]);
-    var columns = [
+    var columns = React.useMemo(function () { return [
         (0, react_components_1.createTableColumn)({
             columnId: 'skill',
             renderHeaderCell: function () { return sortHeaderButton('skill', 'Skill'); },
             renderCell: function (skill) { return (React.createElement("div", { className: styles.skillName },
-                React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name),
-                React.createElement(react_components_1.Body1, null, skill.description))); }
+                React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name))); }
         }),
         (0, react_components_1.createTableColumn)({
             columnId: 'owner',
@@ -100,8 +111,8 @@ function SkillsTable(props) {
                 " ",
                 skill.siteIds.length === 1 ? 'site' : 'sites')); }
         })
-    ];
-    return (React.createElement(react_components_1.DataGrid, { className: styles.grid, items: sortedSkills, columns: columns, getRowId: function (skill) { return skill.id; } },
+    ]; }, [getModifiedByName, getOwnerName, sortHeaderButton, styles.skillName]);
+    return (React.createElement(react_components_1.DataGrid, { className: styles.grid, items: sortedSkills, columns: columns, getRowId: function (skill) { return skill.id; }, resizableColumns: true, columnSizingOptions: SKILLS_TABLE_COLUMN_SIZING_OPTIONS },
         React.createElement(react_components_1.DataGridHeader, null,
             React.createElement(react_components_1.DataGridRow, null, function (_a) {
                 var renderHeaderCell = _a.renderHeaderCell;

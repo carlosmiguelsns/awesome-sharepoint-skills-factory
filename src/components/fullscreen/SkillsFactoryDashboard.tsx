@@ -335,20 +335,6 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
     [createSkillSiteId, props.sites]
   );
 
-  React.useEffect(() => {
-    if (props.activeTab !== 'all-skills') {
-      return;
-    }
-
-    if (!filteredAllSkills.length) {
-      return;
-    }
-
-    if (!props.selectedSkill || !filteredAllSkills.some((skill) => skill.id === props.selectedSkill?.id)) {
-      props.onSelectSkill(filteredAllSkills[0].id);
-    }
-  }, [filteredAllSkills, props.activeTab, props.onSelectSkill, props.selectedSkill]);
-
   const visibleSites = React.useMemo(() => {
     const needle = props.siteSearchText.trim().toLowerCase();
     return props.sites.filter((site) => {
@@ -546,7 +532,7 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
           <div className={styles.usageLayout}>
             <div className={styles.body}>
                 <div className={styles.fullWidthBody}><SkillsTable skills={filteredAllSkills} selectedSkillId={props.selectedSkill?.id} onSelectSkill={props.onSelectSkill} currentUserName={props.currentUserName} /></div>
-                <SkillDetailsPanel skill={props.selectedSkill} sites={props.sites.filter((site) => (props.selectedSkill?.siteIds || []).indexOf(site.id) !== -1)} siteCollections={props.siteCollections} currentUserName={props.currentUserName} />
+                <SkillDetailsPanel skill={props.selectedSkill} sites={props.sites.filter((site) => (props.selectedSkill?.siteIds || []).indexOf(site.id) !== -1)} siteCollections={props.siteCollections} />
               </div>
             </div>
         )}

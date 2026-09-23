@@ -267,17 +267,6 @@ function SkillsFactoryDashboard(props) {
     }, [mySkillsOnly, props.allSkills, props.searchText]);
     var normalizedCreateSkillName = React.useMemo(function () { return (0, textHelpers_1.normalizeSkillFolderName)(createSkillName); }, [createSkillName]);
     var selectedCreateSkillSite = React.useMemo(function () { return props.sites.find(function (site) { return site.id === createSkillSiteId; }); }, [createSkillSiteId, props.sites]);
-    React.useEffect(function () {
-        if (props.activeTab !== 'all-skills') {
-            return;
-        }
-        if (!filteredAllSkills.length) {
-            return;
-        }
-        if (!props.selectedSkill || !filteredAllSkills.some(function (skill) { var _a; return skill.id === ((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id); })) {
-            props.onSelectSkill(filteredAllSkills[0].id);
-        }
-    }, [filteredAllSkills, props.activeTab, props.onSelectSkill, props.selectedSkill]);
     var visibleSites = React.useMemo(function () {
         var needle = props.siteSearchText.trim().toLowerCase();
         return props.sites.filter(function (site) {
@@ -456,7 +445,7 @@ function SkillsFactoryDashboard(props) {
                 React.createElement("div", { className: styles.body },
                     React.createElement("div", { className: styles.fullWidthBody },
                         React.createElement(SkillsTable_1.default, { skills: filteredAllSkills, selectedSkillId: (_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id, onSelectSkill: props.onSelectSkill, currentUserName: props.currentUserName })),
-                    React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites.filter(function (site) { var _a; return (((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.siteIds) || []).indexOf(site.id) !== -1; }), siteCollections: props.siteCollections, currentUserName: props.currentUserName })))),
+                    React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites.filter(function (site) { var _a; return (((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.siteIds) || []).indexOf(site.id) !== -1; }), siteCollections: props.siteCollections })))),
             props.activeTab === 'usage' && (React.createElement("div", { className: styles.usageShell },
                 React.createElement("div", { className: styles.usageTopBar },
                     React.createElement("div", { className: styles.usageFilterChips },

@@ -2,7 +2,6 @@ import * as React from 'react';
 
 import {
   Badge,
-  Body1,
   Button,
   Caption1,
   createTableColumn,
@@ -16,7 +15,8 @@ import {
   Text,
   makeStyles,
   tokens,
-  type TableColumnDefinition
+  type TableColumnDefinition,
+  type TableColumnSizingOptions
 } from '@fluentui/react-components';
 import { ChevronDown24Regular, ChevronUp24Regular, ChevronUpDown24Regular } from '@fluentui/react-icons';
 
@@ -39,6 +39,19 @@ const useStyles = makeStyles({
 
 type SortField = 'skill' | 'owner' | 'created' | 'modifiedBy' | 'modifiedDate';
 type SortDirection = 'ascending' | 'descending';
+
+// Deliberately omits `idealWidth`: Fluent's column resizing treats an explicit idealWidth as
+// authoritative and re-applies it whenever the `columns` array is recreated (e.g. on every
+// re-render), which would wipe out any width the user drags. Leaving it unset lets the resize
+// state fall back to the user's last dragged width instead.
+const SKILLS_TABLE_COLUMN_SIZING_OPTIONS: TableColumnSizingOptions = {
+  skill: { minWidth: 160, defaultWidth: 240 },
+  owner: { minWidth: 140, defaultWidth: 180 },
+  created: { minWidth: 120, defaultWidth: 150 },
+  modifiedBy: { minWidth: 140, defaultWidth: 160 },
+  modifiedDate: { minWidth: 120, defaultWidth: 150 },
+  sites: { minWidth: 80, defaultWidth: 100 }
+};
 
 export interface ISkillsTableProps {
   skills: Skill[];
@@ -119,52 +132,61 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
     [requestSort, sortIconFor]
   );
 
-  const columns: Array<TableColumnDefinition<Skill>> = [
-    createTableColumn<Skill>({
-      columnId: 'skill',
-      renderHeaderCell: () => sortHeaderButton('skill', 'Skill'),
-      renderCell: (skill: Skill) => (
-        <div className={styles.skillName}>
-          <Text weight="semibold">{skill.name}</Text>
-          <Body1>{skill.description}</Body1>
-        </div>
-      )
-    }),
-    createTableColumn<Skill>({
-      columnId: 'owner',
-      renderHeaderCell: () => sortHeaderButton('owner', 'Owner'),
-      renderCell: (skill: Skill) => (
-        <Persona name={getOwnerName(skill)} secondaryText={skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner'} size="small" />
-      )
-    }),
-    createTableColumn<Skill>({
-      columnId: 'created',
-      renderHeaderCell: () => sortHeaderButton('created', 'Created Date'),
-      renderCell: (skill: Skill) => <Caption1>{formatLongDate(skill.skillMarkdownCreatedDate || skill.createdDate)}</Caption1>
-    }),
-    createTableColumn<Skill>({
-      columnId: 'modifiedBy',
-      renderHeaderCell: () => sortHeaderButton('modifiedBy', 'Modified by'),
-      renderCell: (skill: Skill) => <Caption1>{getModifiedByName(skill)}</Caption1>
-    }),
-    createTableColumn<Skill>({
-      columnId: 'modifiedDate',
-      renderHeaderCell: () => sortHeaderButton('modifiedDate', 'Modified date'),
-      renderCell: (skill: Skill) => <Caption1>{formatLongDate(skill.skillMarkdownModifiedDate || skill.modifiedDate)}</Caption1>
-    }),
-    createTableColumn<Skill>({
-      columnId: 'sites',
-      renderHeaderCell: () => 'Sites',
-      renderCell: (skill: Skill) => (
-        <Badge appearance="outline">
-          {skill.siteIds.length} {skill.siteIds.length === 1 ? 'site' : 'sites'}
-        </Badge>
-      )
-    })
-  ];
+  const columns: Array<TableColumnDefinition<Skill>> = React.useMemo(
+    () => [
+      createTableColumn<Skill>({
+        columnId: 'skill',
+        renderHeaderCell: () => sortHeaderButton('skill', 'Skill'),
+        renderCell: (skill: Skill) => (
+          <div className={styles.skillName}>
+            <Text weight="semibold">{skill.name}</Text>
+          </div>
+        )
+      }),
+      createTableColumn<Skill>({
+        columnId: 'owner',
+        renderHeaderCell: () => sortHeaderButton('owner', 'Owner'),
+        renderCell: (skill: Skill) => (
+          <Persona name={getOwnerName(skill)} secondaryText={skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner'} size="small" />
+        )
+      }),
+      createTableColumn<Skill>({
+        columnId: 'created',
+        renderHeaderCell: () => sortHeaderButton('created', 'Created Date'),
+        renderCell: (skill: Skill) => <Caption1>{formatLongDate(skill.skillMarkdownCreatedDate || skill.createdDate)}</Caption1>
+      }),
+      createTableColumn<Skill>({
+        columnId: 'modifiedBy',
+        renderHeaderCell: () => sortHeaderButton('modifiedBy', 'Modified by'),
+        renderCell: (skill: Skill) => <Caption1>{getModifiedByName(skill)}</Caption1>
+      }),
+      createTableColumn<Skill>({
+        columnId: 'modifiedDate',
+        renderHeaderCell: () => sortHeaderButton('modifiedDate', 'Modified date'),
+        renderCell: (skill: Skill) => <Caption1>{formatLongDate(skill.skillMarkdownModifiedDate || skill.modifiedDate)}</Caption1>
+      }),
+      createTableColumn<Skill>({
+        columnId: 'sites',
+        renderHeaderCell: () => 'Sites',
+        renderCell: (skill: Skill) => (
+          <Badge appearance="outline">
+            {skill.siteIds.length} {skill.siteIds.length === 1 ? 'site' : 'sites'}
+          </Badge>
+        )
+      })
+    ],
+    [getModifiedByName, getOwnerName, sortHeaderButton, styles.skillName]
+  );
 
   return (
-    <DataGrid className={styles.grid} items={sortedSkills} columns={columns} getRowId={(skill: Skill) => skill.id}>
+    <DataGrid
+      className={styles.grid}
+      items={sortedSkills}
+      columns={columns}
+      getRowId={(skill: Skill) => skill.id}
+      resizableColumns
+      columnSizingOptions={SKILLS_TABLE_COLUMN_SIZING_OPTIONS}
+    >
       <DataGridHeader>
         <DataGridRow>{({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}</DataGridRow>
       </DataGridHeader>

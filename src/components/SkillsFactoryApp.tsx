@@ -145,36 +145,14 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     [mySkills]
   );
 
-  const filteredAllSkills: Skill[] = React.useMemo(() => {
-    const needle: string = searchText.trim().toLowerCase();
-
-    return skills.filter((skill: Skill) => {
-      const matchesSearch: boolean = !needle
-        ? true
-        : [skill.name, skill.description, skill.owner, skill.knowledgeSources.join(' '), skill.suggestedPrompts.join(' ')]
-            .join(' ')
-            .toLowerCase()
-            .indexOf(needle) !== -1;
-      return matchesSearch;
-    });
-  }, [searchText, skills]);
-
-  const visibleSkills: Skill[] = filteredAllSkills;
-
-  React.useEffect(() => {
-    if (visibleSkills.length === 0) {
-      return;
-    }
-
-    if (!selectedSkillId || !visibleSkills.some((skill: Skill) => skill.id === selectedSkillId)) {
-      setSelectedSkillId(visibleSkills[0].id);
-    }
-  }, [visibleSkills, selectedSkillId]);
-
   const selectedSkill: Skill | undefined = React.useMemo(
     () => skills.find((skill: Skill) => skill.id === selectedSkillId),
     [selectedSkillId, skills]
   );
+
+  const handleToggleSelectSkill = React.useCallback((skillId: string): void => {
+    setSelectedSkillId((current: string | undefined) => (current === skillId ? undefined : skillId));
+  }, []);
 
   const theme = props.hostContext.theme === 'dark' ? webDarkTheme : webLightTheme;
 
@@ -210,7 +188,7 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             siteCollections={siteCollections}
             sites={sites}
             selectedSkill={selectedSkill}
-            onSelectSkill={setSelectedSkillId}
+            onSelectSkill={handleToggleSelectSkill}
             onSelectSite={(_: string) => undefined}
             onCreateSkill={async (request: ICreateSkillRequest) => {
               const result = await skillService.createSkill(request);

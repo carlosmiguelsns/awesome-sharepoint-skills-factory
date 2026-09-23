@@ -4,6 +4,7 @@ lib/
 dist/
 temp/
 solution/
+release/
 *.log
 .vscode/
 *.suo
