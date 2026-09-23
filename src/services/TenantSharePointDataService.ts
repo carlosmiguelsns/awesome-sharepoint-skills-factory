@@ -1,6 +1,6 @@
 import { type MSGraphClientFactory, type MSGraphClientV3, SPHttpClient, type SPHttpClientResponse } from '@microsoft/sp-http';
 
-import type { SharePointSite, SiteCollection, Skill } from '../models';
+import type { SharePointSite, SiteCollection, Skill, SkillSiteRevision } from '../models';
 import { normalizeSearch, normalizeSkillFolderName } from '../utils/textHelpers';
 
 interface ISharePointFolder {
@@ -190,6 +190,24 @@ export class TenantSharePointDataService {
         collectionIds.add(site.siteCollectionId);
 
         const existing: Skill | undefined = skillsByKey.get(skillKey);
+        const siteRevisions: SkillSiteRevision[] = (existing?.siteRevisions || []).filter(
+          (revision: SkillSiteRevision) => revision.siteId !== site.id
+        );
+        siteRevisions.push({
+          siteId: site.id,
+          rawContent: markdown,
+          modifiedDate: skillFile.TimeLastModified,
+          skillFolderName: skillFile.folderName,
+          skillFolderUrl: skillFile.folderServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.folderServerRelativeUrl) : undefined,
+          skillFolderCreatedDate: skillFile.folderCreatedDate,
+          skillFolderModifiedDate: skillFile.folderModifiedDate,
+          skillMarkdownFileName: skillFile.Name,
+          skillMarkdownUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
+          skillMarkdownCreatedDate: skillFile.TimeCreated,
+          skillMarkdownModifiedDate: skillFile.TimeLastModified,
+          skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined
+        });
+
         const nextSkill: Skill = {
           id: existing?.id || skillKey || buildIdFromUrl(skillFile.ServerRelativeUrl || `${site.url}/${skillName}`),
           name: skillName,
@@ -218,7 +236,8 @@ export class TenantSharePointDataService {
           skillMarkdownCreatedDate: skillFile.TimeCreated,
           skillMarkdownModifiedDate: skillFile.TimeLastModified,
           skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined,
-          rawContent: markdown
+          rawContent: markdown,
+          siteRevisions
         };
 
         skillsByKey.set(skillKey, nextSkill);

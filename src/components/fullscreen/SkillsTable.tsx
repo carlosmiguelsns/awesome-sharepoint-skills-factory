@@ -1,31 +1,34 @@
 import * as React from 'react';
 
-import { Body1, Button, Caption1, Persona, Text, makeStyles, tokens } from '@fluentui/react-components';
+import {
+  Badge,
+  Body1,
+  Button,
+  Caption1,
+  createTableColumn,
+  DataGrid,
+  DataGridBody,
+  DataGridCell,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridRow,
+  Persona,
+  Text,
+  makeStyles,
+  tokens,
+  type TableColumnDefinition
+} from '@fluentui/react-components';
 import { ChevronDown24Regular, ChevronUp24Regular, ChevronUpDown24Regular } from '@fluentui/react-icons';
 
 import type { Skill } from '../../models';
 import { formatLongDate } from '../../utils/dateHelpers';
 
 const useStyles = makeStyles({
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  },
-  headerCell: {
-    textAlign: 'left',
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
+  grid: {
+    width: '100%'
   },
   row: {
-    cursor: 'pointer',
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
-  },
-  selectedRow: {
-    backgroundColor: tokens.colorNeutralBackground3
-  },
-  cell: {
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
-    verticalAlign: 'top'
+    cursor: 'pointer'
   },
   skillName: {
     display: 'flex',
@@ -107,68 +110,79 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
     [sortDirection, sortField]
   );
 
+  const sortHeaderButton = React.useCallback(
+    (field: SortField, label: string): React.ReactElement => (
+      <Button appearance="subtle" size="small" icon={sortIconFor(field)} onClick={() => requestSort(field)}>
+        {label}
+      </Button>
+    ),
+    [requestSort, sortIconFor]
+  );
+
+  const columns: Array<TableColumnDefinition<Skill>> = [
+    createTableColumn<Skill>({
+      columnId: 'skill',
+      renderHeaderCell: () => sortHeaderButton('skill', 'Skill'),
+      renderCell: (skill: Skill) => (
+        <div className={styles.skillName}>
+          <Text weight="semibold">{skill.name}</Text>
+          <Body1>{skill.description}</Body1>
+        </div>
+      )
+    }),
+    createTableColumn<Skill>({
+      columnId: 'owner',
+      renderHeaderCell: () => sortHeaderButton('owner', 'Owner'),
+      renderCell: (skill: Skill) => (
+        <Persona name={getOwnerName(skill)} secondaryText={skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner'} size="small" />
+      )
+    }),
+    createTableColumn<Skill>({
+      columnId: 'created',
+      renderHeaderCell: () => sortHeaderButton('created', 'Created Date'),
+      renderCell: (skill: Skill) => <Caption1>{formatLongDate(skill.skillMarkdownCreatedDate || skill.createdDate)}</Caption1>
+    }),
+    createTableColumn<Skill>({
+      columnId: 'modifiedBy',
+      renderHeaderCell: () => sortHeaderButton('modifiedBy', 'Modified by'),
+      renderCell: (skill: Skill) => <Caption1>{getModifiedByName(skill)}</Caption1>
+    }),
+    createTableColumn<Skill>({
+      columnId: 'modifiedDate',
+      renderHeaderCell: () => sortHeaderButton('modifiedDate', 'Modified date'),
+      renderCell: (skill: Skill) => <Caption1>{formatLongDate(skill.skillMarkdownModifiedDate || skill.modifiedDate)}</Caption1>
+    }),
+    createTableColumn<Skill>({
+      columnId: 'sites',
+      renderHeaderCell: () => 'Sites',
+      renderCell: (skill: Skill) => (
+        <Badge appearance="outline">
+          {skill.siteIds.length} {skill.siteIds.length === 1 ? 'site' : 'sites'}
+        </Badge>
+      )
+    })
+  ];
+
   return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('skill')} onClick={() => requestSort('skill')}>
-              Skill
-            </Button>
-          </th>
-          <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('owner')} onClick={() => requestSort('owner')}>
-              Owner
-            </Button>
-          </th>
-          <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('created')} onClick={() => requestSort('created')}>
-              Created Date
-            </Button>
-          </th>
-          <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('modifiedBy')} onClick={() => requestSort('modifiedBy')}>
-              Modified by
-            </Button>
-          </th>
-          <th className={styles.headerCell}>
-            <Button appearance="subtle" size="small" icon={sortIconFor('modifiedDate')} onClick={() => requestSort('modifiedDate')}>
-              Modified date
-            </Button>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {sortedSkills.map((skill: Skill) => {
-          const isSelected: boolean = props.selectedSkillId === skill.id;
+    <DataGrid className={styles.grid} items={sortedSkills} columns={columns} getRowId={(skill: Skill) => skill.id}>
+      <DataGridHeader>
+        <DataGridRow>{({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}</DataGridRow>
+      </DataGridHeader>
+      <DataGridBody<Skill>>
+        {({ item, rowId }) => {
+          const isSelected: boolean = props.selectedSkillId === item.id;
           return (
-            <tr
-              key={skill.id}
-              className={`${styles.row} ${isSelected ? styles.selectedRow : ''}`}
-              onClick={() => props.onSelectSkill(skill.id)}
+            <DataGridRow<Skill>
+              key={rowId}
+              className={styles.row}
+              appearance={isSelected ? 'brand' : 'none'}
+              onClick={() => props.onSelectSkill(item.id)}
             >
-              <td className={styles.cell}>
-                <div className={styles.skillName}>
-                  <Text weight="semibold">{skill.name}</Text>
-                  <Body1>{skill.description}</Body1>
-                </div>
-              </td>
-              <td className={styles.cell}>
-                <Persona name={getOwnerName(skill)} secondaryText={skill.isOwnedByCurrentUser ? 'Current user' : 'Skill owner'} size="small" />
-              </td>
-              <td className={styles.cell}>
-                <Caption1>{formatLongDate(skill.skillMarkdownCreatedDate || skill.createdDate)}</Caption1>
-              </td>
-              <td className={styles.cell}>
-                <Caption1>{getModifiedByName(skill)}</Caption1>
-              </td>
-              <td className={styles.cell}>
-                <Caption1>{formatLongDate(skill.skillMarkdownModifiedDate || skill.modifiedDate)}</Caption1>
-              </td>
-            </tr>
+              {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+            </DataGridRow>
           );
-        })}
-      </tbody>
-    </table>
+        }}
+      </DataGridBody>
+    </DataGrid>
   );
 }

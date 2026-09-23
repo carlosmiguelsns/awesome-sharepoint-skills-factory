@@ -6,6 +6,7 @@ import {
   Card,
   CardHeader,
   Caption1,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogBody,
@@ -20,8 +21,9 @@ import {
 import { Viewer } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
-import type { SharePointSite, SiteCollection, Skill } from '../../models';
+import type { SharePointSite, SiteCollection, Skill, SkillSiteRevision } from '../../models';
 import { formatLongDate } from '../../utils/dateHelpers';
+import SkillCompareDialog from './SkillCompareDialog';
 
 const useStyles = makeStyles({
   root: {
@@ -115,14 +117,29 @@ const useStyles = makeStyles({
     display: 'block',
     lineHeight: tokens.lineHeightBase300
   },
+  previewDialogSurface: {
+    maxWidth: '90vw',
+    width: 'min(1100px, 90vw)'
+  },
   previewSurface: {
+    maxHeight: '65vh',
+    overflow: 'auto',
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    overflow: 'hidden'
+    borderRadius: tokens.borderRadiusMedium
   },
   previewEmpty: {
     color: tokens.colorNeutralForeground3,
     padding: tokens.spacingVerticalM
+  },
+  sitesSectionHeader: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalS
+  },
+  compareCheckbox: {
+    alignSelf: 'flex-start'
   }
 });
 
@@ -157,11 +174,30 @@ export interface ISkillDetailsPanelProps {
 export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React.ReactElement {
   const styles = useStyles();
   const skill: Skill | undefined = props.skill;
-  const [isPreviewOpen, setIsPreviewOpen] = React.useState<boolean>(false);
+  const [previewSiteId, setPreviewSiteId] = React.useState<string | undefined>(undefined);
+  const [compareSiteIds, setCompareSiteIds] = React.useState<string[]>([]);
+  const [isCompareOpen, setIsCompareOpen] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    setIsPreviewOpen(false);
+    setPreviewSiteId(undefined);
+    setCompareSiteIds([]);
+    setIsCompareOpen(false);
   }, [skill?.id]);
+
+  const revisionForSite = React.useCallback(
+    (siteId: string): SkillSiteRevision | undefined => (skill?.siteRevisions || []).find((revision: SkillSiteRevision) => revision.siteId === siteId),
+    [skill]
+  );
+
+  const toggleCompareSite = React.useCallback((siteId: string, checked: boolean): void => {
+    setCompareSiteIds((current: string[]) => {
+      if (checked) {
+        return current.indexOf(siteId) !== -1 || current.length >= 2 ? current : [...current, siteId];
+      }
+
+      return current.filter((id: string) => id !== siteId);
+    });
+  }, []);
 
   if (!skill) {
     return (
@@ -183,32 +219,51 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
         description={<Body1>{skill.description}</Body1>}
       />
 
-      <Dialog open={isPreviewOpen} onOpenChange={(_, data) => setIsPreviewOpen(data.open)}>
-        <DialogSurface>
+      <Dialog open={previewSiteId !== undefined} onOpenChange={(_, data) => setPreviewSiteId(data.open ? previewSiteId : undefined)}>
+        <DialogSurface className={styles.previewDialogSurface}>
           <DialogBody>
-            <DialogTitle>{skill.skillMarkdownFileName || 'SKILL.md'}</DialogTitle>
+            <DialogTitle>{(previewSiteId ? revisionForSite(previewSiteId)?.skillMarkdownFileName : undefined) || skill.skillMarkdownFileName || 'SKILL.md'}</DialogTitle>
             <DialogContent>
-              {skill.rawContent ? (
+              {previewSiteId && revisionForSite(previewSiteId)?.rawContent ? (
                 <div className={styles.previewSurface}>
-                  <Viewer key={skill.id} initialValue={skill.rawContent} />
+                  <Viewer key={previewSiteId} initialValue={revisionForSite(previewSiteId)?.rawContent} />
                 </div>
               ) : (
                 <Body1 className={styles.previewEmpty}>No content available to preview for this skill.</Body1>
               )}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" onClick={() => setIsPreviewOpen(false)}>Close</Button>
+              <Button appearance="secondary" onClick={() => setPreviewSiteId(undefined)}>Close</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
       </Dialog>
 
+      {compareSiteIds.length === 2 ? (
+        <SkillCompareDialog
+          open={isCompareOpen}
+          onOpenChange={setIsCompareOpen}
+          skill={skill}
+          siteA={skillSites.find((site: SharePointSite) => site.id === compareSiteIds[0]) as SharePointSite}
+          siteB={skillSites.find((site: SharePointSite) => site.id === compareSiteIds[1]) as SharePointSite}
+        />
+      ) : null}
+
       <div className={styles.root}>
         <div className={styles.section}>
-          <Caption1>Sites where this skill exists</Caption1>
+          <div className={styles.sitesSectionHeader}>
+            <Caption1>Sites where this skill exists</Caption1>
+            {skillSites.length > 1 ? (
+              <Button appearance="secondary" size="small" disabled={compareSiteIds.length !== 2} onClick={() => setIsCompareOpen(true)}>
+                Compare selected sites
+              </Button>
+            ) : null}
+          </div>
           <div className={styles.siteGrid}>
             {skillSites.map((site: SharePointSite) => {
               const siteCollection: SiteCollection | undefined = siteCollectionForSite(site);
+              const isSelectedForCompare: boolean = compareSiteIds.indexOf(site.id) !== -1;
+              const revision: SkillSiteRevision | undefined = revisionForSite(site.id);
               return (
                 <Card key={site.id} className={styles.siteCard}>
                   <div className={styles.siteCardHeader}>
@@ -216,29 +271,39 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
                     <Caption1>{siteCollection?.name || site.siteCollectionName || 'Site collection'}</Caption1>
                   </div>
 
+                  {skillSites.length > 1 ? (
+                    <Checkbox
+                      className={styles.compareCheckbox}
+                      checked={isSelectedForCompare}
+                      disabled={!isSelectedForCompare && compareSiteIds.length >= 2}
+                      label="Select to compare"
+                      onChange={(_, data) => toggleCompareSite(site.id, Boolean(data.checked))}
+                    />
+                  ) : null}
+
                   <div className={styles.metaGrid}>
                     <div className={styles.siteMetaGroup}>
                       <Caption1 className={styles.metaLabel}>Folder</Caption1>
                       <Body1 className={styles.siteMetaValue}>
-                        <Link href={skill.skillFolderUrl || siteCollection?.url || site.url} target="_blank" rel="noreferrer">
-                          {skill.skillFolderName || 'Open folder'}
+                        <Link href={revision?.skillFolderUrl || skill.skillFolderUrl || siteCollection?.url || site.url} target="_blank" rel="noreferrer">
+                          {revision?.skillFolderName || skill.skillFolderName || 'Open folder'}
                         </Link>
                       </Body1>
-                      <Caption1>Created {skill.skillFolderCreatedDate ? formatLongDate(skill.skillFolderCreatedDate) : '—'}</Caption1>
-                      <Caption1>Modified {skill.skillFolderModifiedDate ? formatLongDate(skill.skillFolderModifiedDate) : '—'}</Caption1>
+                      <Caption1>Created {(revision?.skillFolderCreatedDate || skill.skillFolderCreatedDate) ? formatLongDate((revision?.skillFolderCreatedDate || skill.skillFolderCreatedDate) as string) : '—'}</Caption1>
+                      <Caption1>Modified {(revision?.skillFolderModifiedDate || skill.skillFolderModifiedDate) ? formatLongDate((revision?.skillFolderModifiedDate || skill.skillFolderModifiedDate) as string) : '—'}</Caption1>
                     </div>
 
                     <div className={styles.siteMetaGroup}>
                       <Caption1 className={styles.metaLabel}>Skill file</Caption1>
                       <Body1 className={styles.siteMetaValue}>
-                        <Link onClick={() => setIsPreviewOpen(true)}>
-                          {skill.skillMarkdownFileName || 'SKILL.md'}
+                        <Link onClick={() => setPreviewSiteId(site.id)}>
+                          {revision?.skillMarkdownFileName || skill.skillMarkdownFileName || 'SKILL.md'}
                         </Link>
                       </Body1>
                       <Caption1>Creator {skill.isOwnedByCurrentUser ? props.currentUserName : skill.owner}</Caption1>
-                      <Caption1>Created {skill.skillMarkdownCreatedDate ? formatLongDate(skill.skillMarkdownCreatedDate) : '—'}</Caption1>
-                      <Caption1>Modified {skill.skillMarkdownModifiedDate ? formatLongDate(skill.skillMarkdownModifiedDate) : '—'}</Caption1>
-                      <Caption1>Size {formatBytes(skill.skillMarkdownSize)}</Caption1>
+                      <Caption1>Created {(revision?.skillMarkdownCreatedDate || skill.skillMarkdownCreatedDate) ? formatLongDate((revision?.skillMarkdownCreatedDate || skill.skillMarkdownCreatedDate) as string) : '—'}</Caption1>
+                      <Caption1>Modified {(revision?.skillMarkdownModifiedDate || skill.skillMarkdownModifiedDate) ? formatLongDate((revision?.skillMarkdownModifiedDate || skill.skillMarkdownModifiedDate) as string) : '—'}</Caption1>
+                      <Caption1>Size {formatBytes(revision?.skillMarkdownSize ?? skill.skillMarkdownSize)}</Caption1>
                     </div>
                   </div>
                 </Card>

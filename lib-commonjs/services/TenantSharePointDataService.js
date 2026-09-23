@@ -126,85 +126,115 @@ var TenantSharePointDataService = /** @class */ (function () {
     };
     TenantSharePointDataService.prototype.getTenantSkillsAsync = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var currentUser, sites, skillsByKey, _i, sites_2, site, skillsRootServerRelativeUrl, skillFiles, _a, skillFiles_1, skillFile, markdown, skillName, skillKey, siteIds, collectionIds, existing, nextSkill;
-            var _b, _c;
-            return tslib_1.__generator(this, function (_d) {
-                switch (_d.label) {
+            var currentUser, sites, skillsByKey, _loop_1, this_1, _i, sites_2, site;
+            var _a, _b;
+            return tslib_1.__generator(this, function (_c) {
+                switch (_c.label) {
                     case 0: return [4 /*yield*/, this.getCurrentUserAsync()];
                     case 1:
-                        currentUser = _d.sent();
+                        currentUser = _c.sent();
                         return [4 /*yield*/, this.getValidatedTenantSitesAsync()];
                     case 2:
-                        sites = _d.sent();
+                        sites = _c.sent();
                         skillsByKey = new Map();
-                        _i = 0, sites_2 = sites;
-                        _d.label = 3;
-                    case 3:
-                        if (!(_i < sites_2.length)) return [3 /*break*/, 9];
-                        site = sites_2[_i];
-                        if (!site.hasAgentAssetsLibrary || !site.agentAssetsRootFolderUrl) {
-                            return [3 /*break*/, 8];
-                        }
-                        skillsRootServerRelativeUrl = "".concat(site.agentAssetsRootFolderUrl.replace(/\/$/, ''), "/skills");
-                        return [4 /*yield*/, this.getSkillMarkdownFilesAsync(site.url, skillsRootServerRelativeUrl)];
-                    case 4:
-                        skillFiles = _d.sent();
-                        _a = 0, skillFiles_1 = skillFiles;
-                        _d.label = 5;
-                    case 5:
-                        if (!(_a < skillFiles_1.length)) return [3 /*break*/, 8];
-                        skillFile = skillFiles_1[_a];
-                        return [4 /*yield*/, this.getMarkdownFileContentAsync(site.url, skillFile.ServerRelativeUrl || '')];
-                    case 6:
-                        markdown = _d.sent();
-                        skillName = getTitle(markdown, getFileNameWithoutExtension(skillFile.Name || 'Skill'));
-                        skillKey = normalizeKey(skillName);
-                        siteIds = skillsByKey.has(skillKey) ? new Set(((_b = skillsByKey.get(skillKey)) === null || _b === void 0 ? void 0 : _b.siteIds) || []) : new Set();
-                        collectionIds = skillsByKey.has(skillKey)
-                            ? new Set(((_c = skillsByKey.get(skillKey)) === null || _c === void 0 ? void 0 : _c.siteCollectionIds) || [])
-                            : new Set();
-                        siteIds.add(site.id);
-                        collectionIds.add(site.siteCollectionId);
-                        existing = skillsByKey.get(skillKey);
-                        nextSkill = {
-                            id: (existing === null || existing === void 0 ? void 0 : existing.id) || skillKey || buildIdFromUrl(skillFile.ServerRelativeUrl || "".concat(site.url, "/").concat(skillName)),
-                            name: skillName,
-                            description: readSection(markdown, 'description').join(' ') || "Skill discovered from ".concat(site.name, "."),
-                            owner: readSection(markdown, 'owner').join(' ') || currentUser.displayName,
-                            createdByEmail: currentUser.email,
-                            createdDate: (existing === null || existing === void 0 ? void 0 : existing.createdDate) || new Date().toISOString(),
-                            modifiedDate: new Date().toISOString(),
-                            instructions: readSection(markdown, 'instructions'),
-                            knowledgeSources: readSection(markdown, 'knowledge'),
-                            suggestedPrompts: readSection(markdown, 'suggested prompts'),
-                            usageCount: siteIds.size,
-                            siteIds: Array.from(siteIds.values()),
-                            siteCollectionIds: Array.from(collectionIds.values()),
-                            isOwnedByCurrentUser: true,
-                            source: 'tenant',
-                            originSiteUrl: site.url,
-                            originLibraryTitle: skillFile.folderName ? "AgentAssets/Skills/".concat(skillFile.folderName) : 'AgentAssets/Skills',
-                            sourceDocumentUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
-                            skillFolderName: skillFile.folderName,
-                            skillFolderUrl: skillFile.folderServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.folderServerRelativeUrl) : undefined,
-                            skillFolderCreatedDate: skillFile.folderCreatedDate,
-                            skillFolderModifiedDate: skillFile.folderModifiedDate,
-                            skillMarkdownFileName: skillFile.Name,
-                            skillMarkdownUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
-                            skillMarkdownCreatedDate: skillFile.TimeCreated,
-                            skillMarkdownModifiedDate: skillFile.TimeLastModified,
-                            skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined,
-                            rawContent: markdown
+                        _loop_1 = function (site) {
+                            var skillsRootServerRelativeUrl, skillFiles, _d, skillFiles_1, skillFile, markdown, skillName, skillKey, siteIds, collectionIds, existing, siteRevisions, nextSkill;
+                            return tslib_1.__generator(this, function (_e) {
+                                switch (_e.label) {
+                                    case 0:
+                                        if (!site.hasAgentAssetsLibrary || !site.agentAssetsRootFolderUrl) {
+                                            return [2 /*return*/, "continue"];
+                                        }
+                                        skillsRootServerRelativeUrl = "".concat(site.agentAssetsRootFolderUrl.replace(/\/$/, ''), "/skills");
+                                        return [4 /*yield*/, this_1.getSkillMarkdownFilesAsync(site.url, skillsRootServerRelativeUrl)];
+                                    case 1:
+                                        skillFiles = _e.sent();
+                                        _d = 0, skillFiles_1 = skillFiles;
+                                        _e.label = 2;
+                                    case 2:
+                                        if (!(_d < skillFiles_1.length)) return [3 /*break*/, 5];
+                                        skillFile = skillFiles_1[_d];
+                                        return [4 /*yield*/, this_1.getMarkdownFileContentAsync(site.url, skillFile.ServerRelativeUrl || '')];
+                                    case 3:
+                                        markdown = _e.sent();
+                                        skillName = getTitle(markdown, getFileNameWithoutExtension(skillFile.Name || 'Skill'));
+                                        skillKey = normalizeKey(skillName);
+                                        siteIds = skillsByKey.has(skillKey) ? new Set(((_a = skillsByKey.get(skillKey)) === null || _a === void 0 ? void 0 : _a.siteIds) || []) : new Set();
+                                        collectionIds = skillsByKey.has(skillKey)
+                                            ? new Set(((_b = skillsByKey.get(skillKey)) === null || _b === void 0 ? void 0 : _b.siteCollectionIds) || [])
+                                            : new Set();
+                                        siteIds.add(site.id);
+                                        collectionIds.add(site.siteCollectionId);
+                                        existing = skillsByKey.get(skillKey);
+                                        siteRevisions = ((existing === null || existing === void 0 ? void 0 : existing.siteRevisions) || []).filter(function (revision) { return revision.siteId !== site.id; });
+                                        siteRevisions.push({
+                                            siteId: site.id,
+                                            rawContent: markdown,
+                                            modifiedDate: skillFile.TimeLastModified,
+                                            skillFolderName: skillFile.folderName,
+                                            skillFolderUrl: skillFile.folderServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.folderServerRelativeUrl) : undefined,
+                                            skillFolderCreatedDate: skillFile.folderCreatedDate,
+                                            skillFolderModifiedDate: skillFile.folderModifiedDate,
+                                            skillMarkdownFileName: skillFile.Name,
+                                            skillMarkdownUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
+                                            skillMarkdownCreatedDate: skillFile.TimeCreated,
+                                            skillMarkdownModifiedDate: skillFile.TimeLastModified,
+                                            skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined
+                                        });
+                                        nextSkill = {
+                                            id: (existing === null || existing === void 0 ? void 0 : existing.id) || skillKey || buildIdFromUrl(skillFile.ServerRelativeUrl || "".concat(site.url, "/").concat(skillName)),
+                                            name: skillName,
+                                            description: readSection(markdown, 'description').join(' ') || "Skill discovered from ".concat(site.name, "."),
+                                            owner: readSection(markdown, 'owner').join(' ') || currentUser.displayName,
+                                            createdByEmail: currentUser.email,
+                                            createdDate: (existing === null || existing === void 0 ? void 0 : existing.createdDate) || new Date().toISOString(),
+                                            modifiedDate: new Date().toISOString(),
+                                            instructions: readSection(markdown, 'instructions'),
+                                            knowledgeSources: readSection(markdown, 'knowledge'),
+                                            suggestedPrompts: readSection(markdown, 'suggested prompts'),
+                                            usageCount: siteIds.size,
+                                            siteIds: Array.from(siteIds.values()),
+                                            siteCollectionIds: Array.from(collectionIds.values()),
+                                            isOwnedByCurrentUser: true,
+                                            source: 'tenant',
+                                            originSiteUrl: site.url,
+                                            originLibraryTitle: skillFile.folderName ? "AgentAssets/Skills/".concat(skillFile.folderName) : 'AgentAssets/Skills',
+                                            sourceDocumentUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
+                                            skillFolderName: skillFile.folderName,
+                                            skillFolderUrl: skillFile.folderServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.folderServerRelativeUrl) : undefined,
+                                            skillFolderCreatedDate: skillFile.folderCreatedDate,
+                                            skillFolderModifiedDate: skillFile.folderModifiedDate,
+                                            skillMarkdownFileName: skillFile.Name,
+                                            skillMarkdownUrl: skillFile.ServerRelativeUrl ? toAbsoluteUrl(site.url, skillFile.ServerRelativeUrl) : undefined,
+                                            skillMarkdownCreatedDate: skillFile.TimeCreated,
+                                            skillMarkdownModifiedDate: skillFile.TimeLastModified,
+                                            skillMarkdownSize: typeof skillFile.Length === 'number' ? skillFile.Length : undefined,
+                                            rawContent: markdown,
+                                            siteRevisions: siteRevisions
+                                        };
+                                        skillsByKey.set(skillKey, nextSkill);
+                                        _e.label = 4;
+                                    case 4:
+                                        _d++;
+                                        return [3 /*break*/, 2];
+                                    case 5: return [2 /*return*/];
+                                }
+                            });
                         };
-                        skillsByKey.set(skillKey, nextSkill);
-                        _d.label = 7;
-                    case 7:
-                        _a++;
-                        return [3 /*break*/, 5];
-                    case 8:
+                        this_1 = this;
+                        _i = 0, sites_2 = sites;
+                        _c.label = 3;
+                    case 3:
+                        if (!(_i < sites_2.length)) return [3 /*break*/, 6];
+                        site = sites_2[_i];
+                        return [5 /*yield**/, _loop_1(site)];
+                    case 4:
+                        _c.sent();
+                        _c.label = 5;
+                    case 5:
                         _i++;
                         return [3 /*break*/, 3];
-                    case 9: return [2 /*return*/, Array.from(skillsByKey.values()).sort(function (left, right) { return right.usageCount - left.usageCount; })];
+                    case 6: return [2 /*return*/, Array.from(skillsByKey.values()).sort(function (left, right) { return right.usageCount - left.usageCount; })];
                 }
             });
         });

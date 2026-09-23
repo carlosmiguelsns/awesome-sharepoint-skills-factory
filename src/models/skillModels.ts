@@ -27,6 +27,22 @@ export interface Skill {
   skillMarkdownModifiedDate?: string;
   skillMarkdownSize?: number;
   rawContent?: string;
+  siteRevisions?: SkillSiteRevision[];
+}
+
+export interface SkillSiteRevision {
+  siteId: string;
+  rawContent: string;
+  modifiedDate?: string;
+  skillFolderName?: string;
+  skillFolderUrl?: string;
+  skillFolderCreatedDate?: string;
+  skillFolderModifiedDate?: string;
+  skillMarkdownFileName?: string;
+  skillMarkdownUrl?: string;
+  skillMarkdownCreatedDate?: string;
+  skillMarkdownModifiedDate?: string;
+  skillMarkdownSize?: number;
 }
 
 export interface SharePointSite {

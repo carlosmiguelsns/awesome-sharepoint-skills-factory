@@ -28,6 +28,7 @@
     "@microsoft/sp-webpart-base": "^1.24.0-beta.2",
     "@toast-ui/react-editor": "^3.2.3",
     "react": "17.0.1",
+    "react-diff-viewer-continued": "^4.4.0",
     "react-dom": "17.0.1",
     "tslib": "2.3.1",
     "zod": "^4.4.3"
