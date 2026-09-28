@@ -287,6 +287,60 @@ var TenantSharePointDataService = /** @class */ (function () {
             });
         });
     };
+    TenantSharePointDataService.prototype.isCurrentUserSiteCollectionAdminAsync = function (siteUrl) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var response, data;
+            var _a, _b;
+            return tslib_1.__generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.get("".concat(siteUrl, "/_api/web/currentuser?$select=IsSiteAdmin"), sp_http_1.SPHttpClient.configurations.v1)];
+                    case 1:
+                        response = _c.sent();
+                        if (!response.ok) {
+                            return [2 /*return*/, false];
+                        }
+                        return [4 /*yield*/, response.json()];
+                    case 2:
+                        data = (_c.sent());
+                        return [2 /*return*/, Boolean((_a = data.IsSiteAdmin) !== null && _a !== void 0 ? _a : (_b = data.d) === null || _b === void 0 ? void 0 : _b.IsSiteAdmin)];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.deleteSkillAsync = function (request) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var reportProgress, isAuthorized, folderServerRelativeUrl, deleteResponse;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        reportProgress = function (message) { var _a; return (_a = request.onProgress) === null || _a === void 0 ? void 0 : _a.call(request, message); };
+                        reportProgress('Checking permissions…');
+                        return [4 /*yield*/, this.isCurrentUserSiteCollectionAdminAsync(request.siteUrl)];
+                    case 1:
+                        isAuthorized = _a.sent();
+                        if (!isAuthorized) {
+                            throw new Error('Only Site Collection Administrators or SharePoint Admins can delete a skill.');
+                        }
+                        folderServerRelativeUrl = new URL(request.skillFolderUrl).pathname;
+                        reportProgress('Deleting skill folder…');
+                        return [4 /*yield*/, this.spHttpClient.post("".concat(request.siteUrl, "/_api/web/GetFolderByServerRelativeUrl('").concat(escapeODataString(folderServerRelativeUrl), "')"), sp_http_1.SPHttpClient.configurations.v1, {
+                                headers: {
+                                    Accept: 'application/json;odata=nometadata',
+                                    'X-HTTP-Method': 'DELETE',
+                                    'IF-MATCH': '*'
+                                }
+                            })];
+                    case 2:
+                        deleteResponse = _a.sent();
+                        if (!deleteResponse.ok) {
+                            throw new Error('Failed to delete the skill folder.');
+                        }
+                        reportProgress('Finalizing…');
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     TenantSharePointDataService.prototype.getTenantSitesAsync = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             var graphClient, discovered, nextPath, response, _i, _a, site, collectionUrl;

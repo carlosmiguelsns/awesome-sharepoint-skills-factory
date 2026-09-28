@@ -22,6 +22,9 @@ export default class SharePointSkillsFactoryCopilotComponent extends BaseCopilot
         currentUserName,
         currentUserEmail,
         targetDocument: this.context.domElement.ownerDocument,
+        initialIntent: this.properties.intent,
+        initialSkillCount: this.properties.skillCount,
+        initialShowAllSkills: this.properties.showAllSkills,
         onRequestFullscreen: async (): Promise<void> => {
           await this.requestDisplayModeAsync('fullscreen');
         }

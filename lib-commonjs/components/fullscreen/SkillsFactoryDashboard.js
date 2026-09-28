@@ -5,9 +5,7 @@ var tslib_1 = require("tslib");
 var React = tslib_1.__importStar(require("react"));
 var react_components_1 = require("@fluentui/react-components");
 var react_icons_1 = require("@fluentui/react-icons");
-var react_editor_1 = require("@toast-ui/react-editor");
-require("@toast-ui/editor/dist/toastui-editor.css");
-var textHelpers_1 = require("../../utils/textHelpers");
+var CreateSkillForm_1 = tslib_1.__importDefault(require("../CreateSkillForm"));
 var SkillDetailsPanel_1 = tslib_1.__importDefault(require("./SkillDetailsPanel"));
 var SitesTable_1 = tslib_1.__importDefault(require("./SitesTable"));
 var SkillsTable_1 = tslib_1.__importDefault(require("./SkillsTable"));
@@ -18,9 +16,29 @@ var useStyles = (0, react_components_1.makeStyles)({
     toolbarActions: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'center' },
     searchBar: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'end' },
     searchField: { flex: '1 1 320px', minWidth: '260px' },
-    body: { display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)', gap: react_components_1.tokens.spacingHorizontalM, alignItems: 'start' },
     fullWidthBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalM },
-    usageLayout: { display: 'grid', gap: react_components_1.tokens.spacingVerticalS },
+    slidePanelHidden: {
+        transform: 'translateX(100%)',
+        pointerEvents: 'none',
+        visibility: 'hidden'
+    },
+    skillBlade: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 'clamp(760px, 56%, 100%)',
+        maxWidth: '100%',
+        zIndex: 5,
+        display: 'flex',
+        flexDirection: 'column',
+        overflowY: 'auto',
+        boxShadow: react_components_1.tokens.shadow16,
+        borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
+        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
+        transform: 'translateX(0)',
+        transition: 'transform 200ms ease'
+    },
     usageShell: { position: 'relative', display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
     usageBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
     usageTopBar: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'start' },
@@ -46,7 +64,9 @@ var useStyles = (0, react_components_1.makeStyles)({
         boxShadow: react_components_1.tokens.shadow16,
         borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
         borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge,
-        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge
+        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge,
+        transform: 'translateX(0)',
+        transition: 'transform 200ms ease'
     },
     usagePanelBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS, maxHeight: '72vh', overflowY: 'auto' },
     usagePanelBodyNoScroll: { maxHeight: 'none', overflowY: 'visible' },
@@ -59,19 +79,9 @@ var useStyles = (0, react_components_1.makeStyles)({
         boxShadow: react_components_1.tokens.shadow16,
         borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
         borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge,
-        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge
-    },
-    createPanelOverlay: {
-        position: 'absolute',
-        inset: 0,
-        zIndex: 6,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
-        opacity: 0.9,
-        borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge,
-        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge
+        borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge,
+        transform: 'translateX(0)',
+        transition: 'transform 200ms ease'
     },
     createPanelBody: {
         display: 'flex',
@@ -79,16 +89,7 @@ var useStyles = (0, react_components_1.makeStyles)({
         gap: react_components_1.tokens.spacingVerticalS,
         paddingBottom: react_components_1.tokens.spacingVerticalS
     },
-    createPanelForm: {
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 0.95fr) minmax(0, 1.05fr)',
-        gap: react_components_1.tokens.spacingHorizontalS,
-        alignItems: 'start'
-    },
-    createPanelFormFullWidth: {
-        gridColumn: '1 / -1'
-    },
-    searchPanel: { position: 'absolute', right: 0, top: 0, width: 'min(420px, 92vw)', zIndex: 5, boxShadow: react_components_1.tokens.shadow16, borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge, borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge },
+    searchPanel: { position: 'absolute', right: 0, top: 0, width: 'min(420px, 92vw)', zIndex: 5, boxShadow: react_components_1.tokens.shadow16, borderLeft: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), borderTopLeftRadius: react_components_1.tokens.borderRadiusLarge, borderBottomLeftRadius: react_components_1.tokens.borderRadiusLarge, transform: 'translateX(0)', transition: 'transform 200ms ease' },
     searchPanelBody: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS, maxHeight: '72vh', overflowY: 'auto' },
     filterGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'end' },
     filterField: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS },
@@ -98,30 +99,6 @@ var useStyles = (0, react_components_1.makeStyles)({
     filterPanelClose: { alignSelf: 'flex-end' },
     cardOrderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS },
     cardOrderActions: { display: 'flex', alignItems: 'center', gap: react_components_1.tokens.spacingHorizontalXXS },
-    skillContentField: {
-        boxSizing: 'border-box',
-        width: '550px',
-        minWidth: 0,
-        maxWidth: '100%'
-    },
-    skillContentEditor: {
-        boxSizing: 'border-box',
-        width: '550px',
-        minWidth: 0,
-        maxWidth: '100%',
-        borderRadius: react_components_1.tokens.borderRadiusMedium,
-        overflow: 'hidden',
-        '& > div': {
-            boxSizing: 'border-box',
-            width: '550px',
-            minWidth: 0,
-            maxWidth: '100%'
-        }
-    },
-    statusText: { color: react_components_1.tokens.colorNeutralForeground3 },
-    statusSuccess: { color: react_components_1.tokens.colorPaletteGreenForeground1 },
-    statusError: { color: react_components_1.tokens.colorPaletteRedForeground1 },
-    createPreview: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS },
     select: { minHeight: '32px', borderRadius: react_components_1.tokens.borderRadiusMedium, border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), backgroundColor: react_components_1.tokens.colorNeutralBackground1, color: react_components_1.tokens.colorNeutralForeground1, padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS), font: 'inherit' },
     filterSummary: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalXS, alignItems: 'center' },
     compactStatCard: { display: 'inline-flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS, minHeight: '92px', width: 'fit-content', minWidth: '180px', padding: react_components_1.tokens.spacingVerticalM },
@@ -177,11 +154,6 @@ var useStyles = (0, react_components_1.makeStyles)({
 function compareText(left, right) {
     return left.localeCompare(right, undefined, { sensitivity: 'base' });
 }
-function buildSkillMarkdownContent(normalizedSkillName, skillName, content) {
-    var escapedNormalizedName = normalizedSkillName.replace(/"/g, '\\"');
-    var header = "---\nname: \"".concat(escapedNormalizedName, "\"\ndescription: \"\"\n---\n\n# ").concat(skillName, "\n\n\n");
-    return "".concat(header).concat(content);
-}
 function buildSiteSkillMap(sites, skills) {
     var map = new Map();
     for (var _i = 0, sites_1 = sites; _i < sites_1.length; _i++) {
@@ -213,7 +185,6 @@ var DEFAULT_USAGE_CARD_VISIBILITY = {
     sites: true
 };
 function SkillsFactoryDashboard(props) {
-    var _this = this;
     var _a, _b, _c;
     var styles = useStyles();
     var _d = React.useState(1), usagePage = _d[0], setUsagePage = _d[1];
@@ -226,10 +197,10 @@ function SkillsFactoryDashboard(props) {
     var _l = React.useState(false), usageSettingsOpen = _l[0], setUsageSettingsOpen = _l[1];
     var _m = React.useState(false), skillsSearchOpen = _m[0], setSkillsSearchOpen = _m[1];
     var _o = React.useState(false), createSkillOpen = _o[0], setCreateSkillOpen = _o[1];
-    var skillContentEditorRef = React.useRef(null);
-    var _p = React.useState(false), mySkillsOnly = _p[0], setMySkillsOnly = _p[1];
-    var _q = React.useState(DEFAULT_USAGE_CARD_ORDER), usageCardOrder = _q[0], setUsageCardOrder = _q[1];
-    var _r = React.useState(DEFAULT_USAGE_CARD_VISIBILITY), usageCardVisibility = _r[0], setUsageCardVisibility = _r[1];
+    var _p = React.useState(false), createSkillSubmitting = _p[0], setCreateSkillSubmitting = _p[1];
+    var _q = React.useState(false), mySkillsOnly = _q[0], setMySkillsOnly = _q[1];
+    var _r = React.useState(DEFAULT_USAGE_CARD_ORDER), usageCardOrder = _r[0], setUsageCardOrder = _r[1];
+    var _s = React.useState(DEFAULT_USAGE_CARD_VISIBILITY), usageCardVisibility = _s[0], setUsageCardVisibility = _s[1];
     var moveUsageCard = React.useCallback(function (key, direction) {
         setUsageCardOrder(function (current) {
             var _a;
@@ -249,12 +220,6 @@ function SkillsFactoryDashboard(props) {
             return (tslib_1.__assign(tslib_1.__assign({}, current), (_a = {}, _a[key] = visible, _a)));
         });
     }, []);
-    var _s = React.useState(''), createSkillSiteId = _s[0], setCreateSkillSiteId = _s[1];
-    var _t = React.useState(''), createSkillName = _t[0], setCreateSkillName = _t[1];
-    var _u = React.useState(''), createSkillContent = _u[0], setCreateSkillContent = _u[1];
-    var _v = React.useState(false), createSkillSubmitting = _v[0], setCreateSkillSubmitting = _v[1];
-    var _w = React.useState(''), createSkillStatus = _w[0], setCreateSkillStatus = _w[1];
-    var _x = React.useState(''), createSkillError = _x[0], setCreateSkillError = _x[1];
     var theme = props.hostContext.theme === 'dark' ? react_components_1.webDarkTheme : react_components_1.webLightTheme;
     var siteSkillMap = React.useMemo(function () { return buildSiteSkillMap(props.sites, props.usageSkills); }, [props.sites, props.usageSkills]);
     var filteredAllSkills = React.useMemo(function () {
@@ -265,8 +230,6 @@ function SkillsFactoryDashboard(props) {
             return matchesSearch && matchesOwner;
         });
     }, [mySkillsOnly, props.allSkills, props.searchText]);
-    var normalizedCreateSkillName = React.useMemo(function () { return (0, textHelpers_1.normalizeSkillFolderName)(createSkillName); }, [createSkillName]);
-    var selectedCreateSkillSite = React.useMemo(function () { return props.sites.find(function (site) { return site.id === createSkillSiteId; }); }, [createSkillSiteId, props.sites]);
     var visibleSites = React.useMemo(function () {
         var needle = props.siteSearchText.trim().toLowerCase();
         return props.sites.filter(function (site) {
@@ -337,11 +300,6 @@ function SkillsFactoryDashboard(props) {
     var safeUsagePage = Math.min(usagePage, usagePageCount);
     var usagePageSites = sortedUsageSites.slice((safeUsagePage - 1) * 10, safeUsagePage * 10);
     React.useEffect(function () { setUsagePage(1); }, [props.siteSearchText, usageCoverageFilter, usageSkillFilterId, usageSiteFilterId, usageSortDirection, usageSortField]);
-    React.useEffect(function () {
-        if (createSkillOpen && !createSkillSiteId && props.sites.length) {
-            setCreateSkillSiteId(props.sites[0].id);
-        }
-    }, [createSkillOpen, createSkillSiteId, props.sites]);
     var handleUsageSortChange = React.useCallback(function (field) {
         if (usageSortField === field) {
             setUsageSortDirection(function (current) { return (current === 'ascending' ? 'descending' : 'ascending'); });
@@ -350,63 +308,6 @@ function SkillsFactoryDashboard(props) {
         setUsageSortField(field);
         setUsageSortDirection(field === 'skills' ? 'descending' : 'ascending');
     }, [usageSortField]);
-    var handleCreateSkillSubmit = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-        var trimmedName, trimmedContent, site, normalizedName, result, error_1;
-        return tslib_1.__generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    trimmedName = createSkillName.trim();
-                    trimmedContent = createSkillContent;
-                    site = props.sites.find(function (item) { return item.id === createSkillSiteId; });
-                    setCreateSkillError('');
-                    setCreateSkillStatus('');
-                    if (!trimmedName) {
-                        setCreateSkillError('Skill Name is required.');
-                        return [2 /*return*/];
-                    }
-                    if (!site) {
-                        setCreateSkillError('Site selection is required.');
-                        return [2 /*return*/];
-                    }
-                    normalizedName = (0, textHelpers_1.normalizeSkillFolderName)(trimmedName);
-                    if (!normalizedName) {
-                        setCreateSkillError('Skill Name must contain at least one letter or number.');
-                        return [2 /*return*/];
-                    }
-                    if (!trimmedContent.trim()) {
-                        setCreateSkillError('Skill Content is required.');
-                        return [2 /*return*/];
-                    }
-                    setCreateSkillSubmitting(true);
-                    _a.label = 1;
-                case 1:
-                    _a.trys.push([1, 3, 4, 5]);
-                    setCreateSkillStatus('Creating skill folder…');
-                    return [4 /*yield*/, props.onCreateSkill({
-                            siteUrl: site.url,
-                            skillName: trimmedName,
-                            skillContent: buildSkillMarkdownContent(normalizedName, trimmedName, trimmedContent),
-                            onProgress: function (message) { return setCreateSkillStatus(message); }
-                        })];
-                case 2:
-                    result = _a.sent();
-                    setCreateSkillStatus("Created ".concat(result.normalizedSkillName, " successfully."));
-                    setCreateSkillName('');
-                    setCreateSkillContent('');
-                    setCreateSkillSiteId('');
-                    setCreateSkillOpen(false);
-                    return [3 /*break*/, 5];
-                case 3:
-                    error_1 = _a.sent();
-                    setCreateSkillError(error_1 instanceof Error ? error_1.message : 'Failed to create the skill.');
-                    return [3 /*break*/, 5];
-                case 4:
-                    setCreateSkillSubmitting(false);
-                    return [7 /*endfinally*/];
-                case 5: return [2 /*return*/];
-            }
-        });
-    }); }, [createSkillContent, createSkillName, createSkillSiteId, props.onCreateSkill, props.sites]);
     var themeForHost = theme;
     return (React.createElement(react_components_1.IdPrefixProvider, { value: "sharepoint-skills-factory-" },
         React.createElement(react_components_1.FluentProvider, { theme: themeForHost, targetDocument: props.targetDocument, className: styles.root },
@@ -429,7 +330,7 @@ function SkillsFactoryDashboard(props) {
                             React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", onClick: function () { return props.onSearchTextChange(''); } }))) : null),
                     React.createElement("div", { className: styles.toolbarActions },
                         React.createElement(react_components_1.Button, { appearance: "secondary", icon: skillsSearchOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () { return setSkillsSearchOpen(function (current) { return !current; }); } }, skillsSearchOpen ? 'Close search' : 'Open search'))),
-                skillsSearchOpen ? (React.createElement(react_components_1.Card, { className: styles.searchPanel },
+                React.createElement(react_components_1.Card, { className: (0, react_components_1.mergeClasses)(styles.searchPanel, !skillsSearchOpen && styles.slidePanelHidden) },
                     React.createElement("div", { className: styles.searchPanelBody },
                         React.createElement("div", { className: styles.filterPanelHeader },
                             React.createElement("div", { className: styles.filterPanelTitle },
@@ -440,12 +341,12 @@ function SkillsFactoryDashboard(props) {
                             React.createElement(react_components_1.Input, { value: props.searchText, onChange: function (_, data) { return props.onSearchTextChange(data.value); }, placeholder: "Search skills" })),
                         React.createElement(react_components_1.Field, { className: styles.filterField, label: "Ownership" },
                             React.createElement(react_components_1.Checkbox, { checked: mySkillsOnly, onChange: function (_, data) { return setMySkillsOnly(Boolean(data.checked)); }, label: "Only my skills" }),
-                            React.createElement(react_components_1.Caption1, null, "Show skills owned by the current user."))))) : null)),
-            props.activeTab === 'all-skills' && (React.createElement("div", { className: styles.usageLayout },
-                React.createElement("div", { className: styles.body },
-                    React.createElement("div", { className: styles.fullWidthBody },
-                        React.createElement(SkillsTable_1.default, { skills: filteredAllSkills, selectedSkillId: (_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id, onSelectSkill: props.onSelectSkill, currentUserName: props.currentUserName })),
-                    React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites.filter(function (site) { var _a; return (((_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.siteIds) || []).indexOf(site.id) !== -1; }), siteCollections: props.siteCollections })))),
+                            React.createElement(react_components_1.Caption1, null, "Show skills owned by the current user.")))),
+                React.createElement("div", { className: styles.fullWidthBody },
+                    React.createElement(SkillsTable_1.default, { skills: filteredAllSkills, selectedSkillId: (_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id, onSelectSkill: props.onSelectSkill, currentUserName: props.currentUserName })),
+                React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.skillBlade, !props.selectedSkill && styles.slidePanelHidden) },
+                    React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites, siteCollections: props.siteCollections, onClose: function () { if (props.selectedSkill)
+                            props.onSelectSkill(props.selectedSkill.id); }, onDeleteSkillSite: props.onDeleteSkillSite, onCreateSkill: props.onCreateSkill })))),
             props.activeTab === 'usage' && (React.createElement("div", { className: styles.usageShell },
                 React.createElement("div", { className: styles.usageTopBar },
                     React.createElement("div", { className: styles.usageFilterChips },
@@ -469,8 +370,6 @@ function SkillsFactoryDashboard(props) {
                         React.createElement(react_components_1.Button, { appearance: "secondary", icon: React.createElement(react_icons_1.Add24Regular, null), onClick: function () {
                                 setUsageFiltersOpen(false);
                                 setUsageSettingsOpen(false);
-                                setCreateSkillStatus('');
-                                setCreateSkillError('');
                                 setCreateSkillOpen(function (current) { return !current; });
                             } }, createSkillOpen ? 'Close create skill' : 'Create Skill'),
                         React.createElement(react_components_1.Button, { appearance: "secondary", icon: usageFiltersOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () {
@@ -483,7 +382,7 @@ function SkillsFactoryDashboard(props) {
                                 setUsageFiltersOpen(false);
                                 setUsageSettingsOpen(function (current) { return !current; });
                             } }, usageSettingsOpen ? 'Close settings' : 'Settings'))),
-                usageFiltersOpen ? (React.createElement(react_components_1.Card, { className: styles.usagePanel },
+                React.createElement(react_components_1.Card, { className: (0, react_components_1.mergeClasses)(styles.usagePanel, !usageFiltersOpen && styles.slidePanelHidden) },
                     React.createElement("div", { className: styles.usagePanelBody },
                         React.createElement("div", { className: styles.filterPanelHeader },
                             React.createElement("div", { className: styles.filterPanelTitle },
@@ -508,8 +407,8 @@ function SkillsFactoryDashboard(props) {
                                     React.createElement("option", { value: "with-skills" }, "With skills"),
                                     React.createElement("option", { value: "without-skills" }, "Without skills"))),
                             React.createElement(react_components_1.Field, { className: styles.filterField, label: "Search sites" },
-                                React.createElement(react_components_1.Input, { value: props.siteSearchText, onChange: function (_, data) { return props.onSiteSearchTextChange(data.value); }, placeholder: "Search sites, URLs, or collections" })))))) : null,
-                usageSettingsOpen ? (React.createElement(react_components_1.Card, { className: styles.usagePanel },
+                                React.createElement(react_components_1.Input, { value: props.siteSearchText, onChange: function (_, data) { return props.onSiteSearchTextChange(data.value); }, placeholder: "Search sites, URLs, or collections" }))))),
+                React.createElement(react_components_1.Card, { className: (0, react_components_1.mergeClasses)(styles.usagePanel, !usageSettingsOpen && styles.slidePanelHidden) },
                     React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.usagePanelBody, styles.usagePanelBodyNoScroll) },
                         React.createElement("div", { className: styles.filterPanelHeader },
                             React.createElement("div", { className: styles.filterPanelTitle },
@@ -524,39 +423,15 @@ function SkillsFactoryDashboard(props) {
                                 React.createElement("div", { className: styles.cardOrderActions },
                                     React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: React.createElement(react_icons_1.ChevronUp16Regular, null), "aria-label": "Move ".concat(label, " up"), disabled: index === 0, onClick: function () { return moveUsageCard(key, -1); } }),
                                     React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: React.createElement(react_icons_1.ChevronDown16Regular, null), "aria-label": "Move ".concat(label, " down"), disabled: index === usageCardOrder.length - 1, onClick: function () { return moveUsageCard(key, 1); } }))));
-                        }))))) : null,
-                createSkillOpen ? (React.createElement(react_components_1.Card, { className: styles.createPanel },
-                    createSkillSubmitting ? (React.createElement("div", { className: styles.createPanelOverlay },
-                        React.createElement(react_components_1.Spinner, { label: createSkillStatus || 'Creating skill…' }))) : null,
+                        })))),
+                React.createElement(react_components_1.Card, { className: (0, react_components_1.mergeClasses)(styles.createPanel, !createSkillOpen && styles.slidePanelHidden) },
                     React.createElement("div", { className: styles.createPanelBody },
                         React.createElement("div", { className: styles.filterPanelHeader },
                             React.createElement("div", { className: styles.filterPanelTitle },
                                 React.createElement(react_components_1.Text, { weight: "semibold" }, "Create Skill"),
                                 React.createElement(react_components_1.Caption1, null, "Create a new skill folder and SKILL.md in a selected site.")),
                             React.createElement(react_components_1.Button, { className: styles.filterPanelClose, appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close create skill", disabled: createSkillSubmitting, onClick: function () { return setCreateSkillOpen(false); } })),
-                        createSkillError ? React.createElement(react_components_1.Body1, { className: styles.statusError }, createSkillError) : null,
-                        createSkillStatus && !createSkillSubmitting ? React.createElement(react_components_1.Body1, { className: styles.statusText }, createSkillStatus) : null,
-                        React.createElement("div", { className: styles.createPanelForm },
-                            React.createElement(react_components_1.Field, { className: styles.filterField, label: "Site", required: true },
-                                React.createElement("select", { className: styles.select, value: createSkillSiteId, disabled: createSkillSubmitting, onChange: function (event) { return setCreateSkillSiteId(event.target.value); } },
-                                    React.createElement("option", { value: "" }, "Select a site"),
-                                    props.sites.slice().sort(function (a, b) { return compareText(a.name, b.name); }).map(function (site) { return (React.createElement("option", { key: site.id, value: site.id }, site.name)); }))),
-                            React.createElement(react_components_1.Field, { className: styles.filterField, label: "Skill Name", required: true },
-                                React.createElement(react_components_1.Input, { value: createSkillName, disabled: createSkillSubmitting, onChange: function (_, data) { return setCreateSkillName(data.value); }, placeholder: 'Example: "Build HTML Dashboard!"' }),
-                                React.createElement(react_components_1.Caption1, null,
-                                    "Normalized folder name: ",
-                                    normalizedCreateSkillName || '—')),
-                            React.createElement(react_components_1.Field, { className: (0, react_components_1.mergeClasses)(styles.filterField, styles.createPanelFormFullWidth, styles.skillContentField), style: { width: 550, minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }, label: "Skill Content", required: true },
-                                React.createElement("div", { className: styles.skillContentEditor },
-                                    React.createElement(react_editor_1.Editor, { ref: skillContentEditorRef, initialValue: createSkillContent, previewStyle: "vertical", initialEditType: "wysiwyg", useCommandShortcut: true, placeholder: "Write the SKILL.md content\u2026", onChange: function () { var _a, _b; return setCreateSkillContent((_b = (_a = skillContentEditorRef.current) === null || _a === void 0 ? void 0 : _a.getInstance().getMarkdown()) !== null && _b !== void 0 ? _b : ''); } }))),
-                            React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.createPreview, styles.createPanelFormFullWidth) },
-                                React.createElement(react_components_1.Caption1, null,
-                                    "Folder path: ",
-                                    selectedCreateSkillSite ? "".concat(selectedCreateSkillSite.name, " / Agent Assets / skills / ").concat(normalizedCreateSkillName || 'skill-name') : 'Select a site to preview the path.'),
-                                React.createElement(react_components_1.Caption1, null,
-                                    "SKILL.md path: ",
-                                    selectedCreateSkillSite ? "".concat(selectedCreateSkillSite.name, " / Agent Assets / skills / ").concat(normalizedCreateSkillName || 'skill-name', " / SKILL.md") : 'Select a site to preview the path.')),
-                            React.createElement(react_components_1.Button, { className: styles.createPanelFormFullWidth, appearance: "primary", onClick: function () { void handleCreateSkillSubmit(); }, disabled: createSkillSubmitting || !createSkillName.trim() || !createSkillSiteId }, createSkillSubmitting ? 'Creating…' : 'Create Skill'))))) : null,
+                        React.createElement(CreateSkillForm_1.default, { sites: props.sites, onCreateSkill: props.onCreateSkill, onCreated: function () { return setCreateSkillOpen(false); }, onSubmittingChange: setCreateSkillSubmitting }))),
                 React.createElement("div", { className: styles.kpiGrid }, [
                     ['Total Sites', visibleSites.length, 'Sites in the current view'],
                     ['Total Skills', visibleSkills.length, 'Skills used by those sites'],

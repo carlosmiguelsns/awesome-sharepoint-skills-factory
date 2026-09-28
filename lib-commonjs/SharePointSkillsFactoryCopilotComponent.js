@@ -23,6 +23,9 @@ var SharePointSkillsFactoryCopilotComponent = /** @class */ (function (_super) {
             currentUserName: currentUserName,
             currentUserEmail: currentUserEmail,
             targetDocument: this.context.domElement.ownerDocument,
+            initialIntent: this.properties.intent,
+            initialSkillCount: this.properties.skillCount,
+            initialShowAllSkills: this.properties.showAllSkills,
             onRequestFullscreen: function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
                 return tslib_1.__generator(this, function (_a) {
                     switch (_a.label) {

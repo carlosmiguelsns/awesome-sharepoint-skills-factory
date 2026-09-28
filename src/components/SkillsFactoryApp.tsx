@@ -16,9 +16,10 @@ import type { MSGraphClientFactory, SPHttpClient } from '@microsoft/sp-http';
 import type { SharePointSite, SiteCollection, Skill } from '../models';
 import { SkillService } from '../services/SkillService';
 import { SiteService } from '../services/SiteService';
-import InlineSkillsView from './inline/InlineSkillsView';
+import InlineSkillsView, { type InlineViewMode } from './inline/InlineSkillsView';
 import SkillsFactoryDashboard, { type DashboardTab } from './fullscreen/SkillsFactoryDashboard';
-import type { ICreateSkillRequest } from '../services/TenantSharePointDataService';
+import type { ICreateSkillRequest, ICreateSkillResult } from '../services/TenantSharePointDataService';
+import type { ISharePointSkillsFactoryCopilotComponentProperties } from '../SharePointSkillsFactoryCopilotComponentProperties';
 
 const useStyles = makeStyles({
   root: {
@@ -41,8 +42,13 @@ export interface ISkillsFactoryAppProps {
   currentUserName: string;
   currentUserEmail: string;
   targetDocument?: Document;
+  initialIntent?: ISharePointSkillsFactoryCopilotComponentProperties['intent'];
+  initialSkillCount?: ISharePointSkillsFactoryCopilotComponentProperties['skillCount'];
+  initialShowAllSkills?: ISharePointSkillsFactoryCopilotComponentProperties['showAllSkills'];
   onRequestFullscreen: () => Promise<void>;
 }
+
+const DEFAULT_INLINE_SKILL_LIMIT: number = 5;
 
 export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.ReactElement {
   const styles = useStyles();
@@ -73,6 +79,10 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [discoveredSiteCount, setDiscoveredSiteCount] = React.useState<number>(0);
   const [loadingMessage, setLoadingMessage] = React.useState<string>('Loading skills factory…');
+  const [inlineMode, setInlineMode] = React.useState<InlineViewMode>(props.initialIntent === 'createSkill' ? 'create' : 'list');
+  const [inlineSkillLimit, setInlineSkillLimit] = React.useState<number | 'all'>(
+    props.initialShowAllSkills ? 'all' : props.initialSkillCount || DEFAULT_INLINE_SKILL_LIMIT
+  );
 
   React.useEffect(() => {
     let isCancelled: boolean = false;
@@ -131,18 +141,36 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     setSkills(allSkills);
   }, [skillService]);
 
+  const handleCreateSkill = React.useCallback(
+    async (request: ICreateSkillRequest): Promise<ICreateSkillResult> => {
+      const result: ICreateSkillResult = await skillService.createSkill(request);
+      await refreshSkills();
+      return result;
+    },
+    [refreshSkills, skillService]
+  );
+
+  const handleDeleteSkillSite = React.useCallback(
+    async (site: SharePointSite, skillFolderUrl: string): Promise<void> => {
+      await skillService.deleteSkill({ siteUrl: site.url, skillFolderUrl });
+      await refreshSkills();
+    },
+    [refreshSkills, skillService]
+  );
+
   const mySkills: Skill[] = React.useMemo(
     () => skills.filter((skill: Skill) => skill.isOwnedByCurrentUser),
     [skills]
   );
 
-  const topMySkills: Skill[] = React.useMemo(
-    () =>
-      mySkills
-        .slice()
-        .sort((left: Skill, right: Skill) => right.usageCount - left.usageCount || right.modifiedDate.localeCompare(left.modifiedDate))
-        .slice(0, 5),
+  const sortedMySkills: Skill[] = React.useMemo(
+    () => mySkills.slice().sort((left: Skill, right: Skill) => right.usageCount - left.usageCount || right.modifiedDate.localeCompare(left.modifiedDate)),
     [mySkills]
+  );
+
+  const visibleMySkills: Skill[] = React.useMemo(
+    () => (inlineSkillLimit === 'all' ? sortedMySkills : sortedMySkills.slice(0, inlineSkillLimit)),
+    [sortedMySkills, inlineSkillLimit]
   );
 
   const selectedSkill: Skill | undefined = React.useMemo(
@@ -152,6 +180,44 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
 
   const handleToggleSelectSkill = React.useCallback((skillId: string): void => {
     setSelectedSkillId((current: string | undefined) => (current === skillId ? undefined : skillId));
+  }, []);
+
+  const handleTabChange = React.useCallback((tab: DashboardTab): void => {
+    setActiveTab(tab);
+    setSelectedSkillId(undefined);
+  }, []);
+
+  React.useEffect(() => {
+    if (props.hostContext.displayMode === 'inline') {
+      setSelectedSkillId(undefined);
+    }
+  }, [props.hostContext.displayMode]);
+
+  const handleSelectInlineSkill = React.useCallback(
+    async (skillId: string): Promise<void> => {
+      setSelectedSkillId(skillId);
+      setActiveTab('all-skills');
+      await props.onRequestFullscreen();
+    },
+    [props.onRequestFullscreen]
+  );
+
+  const handleShowTopSkills = React.useCallback((count: number): void => {
+    setInlineMode('list');
+    setInlineSkillLimit(count);
+  }, []);
+
+  const handleShowAllSkills = React.useCallback((): void => {
+    setInlineMode('list');
+    setInlineSkillLimit('all');
+  }, []);
+
+  const handleStartCreateSkill = React.useCallback((): void => {
+    setInlineMode('create');
+  }, []);
+
+  const handleCancelCreateSkill = React.useCallback((): void => {
+    setInlineMode('list');
   }, []);
 
   const theme = props.hostContext.theme === 'dark' ? webDarkTheme : webLightTheme;
@@ -165,12 +231,19 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
           </div>
         ) : props.hostContext.displayMode === 'inline' ? (
           <InlineSkillsView
-            skills={topMySkills}
-            onSelectSkill={setSelectedSkillId}
-            onExpand={async (): Promise<void> => {
-              setActiveTab('all-skills');
-              await props.onRequestFullscreen();
-            }}
+            mode={inlineMode}
+            skills={visibleMySkills}
+            totalMySkillsCount={mySkills.length}
+            skillLimit={inlineSkillLimit}
+            currentUserName={props.currentUserName}
+            sites={sites}
+            onSelectSkill={(skillId: string) => { void handleSelectInlineSkill(skillId); }}
+            onShowTopSkills={handleShowTopSkills}
+            onShowAllSkills={handleShowAllSkills}
+            onStartCreateSkill={handleStartCreateSkill}
+            onCancelCreateSkill={handleCancelCreateSkill}
+            onCreateSkill={handleCreateSkill}
+            onSkillCreated={handleCancelCreateSkill}
           />
         ) : (
           <SkillsFactoryDashboard
@@ -178,7 +251,7 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             targetDocument={props.targetDocument}
             currentUserName={props.currentUserName}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={handleTabChange}
             searchText={searchText}
             onSearchTextChange={setSearchText}
             siteSearchText={siteSearchText}
@@ -190,11 +263,8 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             selectedSkill={selectedSkill}
             onSelectSkill={handleToggleSelectSkill}
             onSelectSite={(_: string) => undefined}
-            onCreateSkill={async (request: ICreateSkillRequest) => {
-              const result = await skillService.createSkill(request);
-              await refreshSkills();
-              return result;
-            }}
+            onCreateSkill={handleCreateSkill}
+            onDeleteSkillSite={handleDeleteSkillSite}
             onRequestFullscreen={props.onRequestFullscreen}
           />
         )}

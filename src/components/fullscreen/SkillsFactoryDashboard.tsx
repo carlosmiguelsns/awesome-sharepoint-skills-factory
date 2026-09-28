@@ -13,7 +13,6 @@ import {
   IdPrefixProvider,
   Input,
   mergeClasses,
-  Spinner,
   Tab,
   TabList,
   Text,
@@ -33,11 +32,9 @@ import {
   Settings24Regular
 } from '@fluentui/react-icons';
 import type { ICopilotComponentHostContext } from '@microsoft/sp-copilot-component';
-import { Editor } from '@toast-ui/react-editor';
-import '@toast-ui/editor/dist/toastui-editor.css';
 
 import type { SharePointSite, SiteCollection, Skill } from '../../models';
-import { normalizeSkillFolderName } from '../../utils/textHelpers';
+import CreateSkillForm from '../CreateSkillForm';
 import SkillDetailsPanel from './SkillDetailsPanel';
 import SitesTable from './SitesTable';
 import SkillsTable from './SkillsTable';
@@ -49,9 +46,29 @@ const useStyles = makeStyles({
   toolbarActions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'center' },
   searchBar: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'end' },
   searchField: { flex: '1 1 320px', minWidth: '260px' },
-  body: { display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)', gap: tokens.spacingHorizontalM, alignItems: 'start' },
   fullWidthBody: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM },
-  usageLayout: { display: 'grid', gap: tokens.spacingVerticalS },
+  slidePanelHidden: {
+    transform: 'translateX(100%)',
+    pointerEvents: 'none',
+    visibility: 'hidden'
+  },
+  skillBlade: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 'clamp(760px, 56%, 100%)',
+    maxWidth: '100%',
+    zIndex: 5,
+    display: 'flex',
+    flexDirection: 'column',
+    overflowY: 'auto',
+    boxShadow: tokens.shadow16,
+    borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+    transform: 'translateX(0)',
+    transition: 'transform 200ms ease'
+  },
   usageShell: { position: 'relative', display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
   usageBody: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
   usageTopBar: { display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: tokens.spacingHorizontalS, alignItems: 'start' },
@@ -77,7 +94,9 @@ const useStyles = makeStyles({
     boxShadow: tokens.shadow16,
     borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
     borderTopLeftRadius: tokens.borderRadiusLarge,
-    borderBottomLeftRadius: tokens.borderRadiusLarge
+    borderBottomLeftRadius: tokens.borderRadiusLarge,
+    transform: 'translateX(0)',
+    transition: 'transform 200ms ease'
   },
   usagePanelBody: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, maxHeight: '72vh', overflowY: 'auto' },
   usagePanelBodyNoScroll: { maxHeight: 'none', overflowY: 'visible' },
@@ -90,19 +109,9 @@ const useStyles = makeStyles({
     boxShadow: tokens.shadow16,
     borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
     borderTopLeftRadius: tokens.borderRadiusLarge,
-    borderBottomLeftRadius: tokens.borderRadiusLarge
-  },
-  createPanelOverlay: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 6,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: tokens.colorNeutralBackground1,
-    opacity: 0.9,
-    borderTopLeftRadius: tokens.borderRadiusLarge,
-    borderBottomLeftRadius: tokens.borderRadiusLarge
+    borderBottomLeftRadius: tokens.borderRadiusLarge,
+    transform: 'translateX(0)',
+    transition: 'transform 200ms ease'
   },
   createPanelBody: {
     display: 'flex',
@@ -110,16 +119,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalS,
     paddingBottom: tokens.spacingVerticalS
   },
-  createPanelForm: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(0, 0.95fr) minmax(0, 1.05fr)',
-    gap: tokens.spacingHorizontalS,
-    alignItems: 'start'
-  },
-  createPanelFormFullWidth: {
-    gridColumn: '1 / -1'
-  },
-  searchPanel: { position: 'absolute', right: 0, top: 0, width: 'min(420px, 92vw)', zIndex: 5, boxShadow: tokens.shadow16, borderLeft: `1px solid ${tokens.colorNeutralStroke2}`, borderTopLeftRadius: tokens.borderRadiusLarge, borderBottomLeftRadius: tokens.borderRadiusLarge },
+  searchPanel: { position: 'absolute', right: 0, top: 0, width: 'min(420px, 92vw)', zIndex: 5, boxShadow: tokens.shadow16, borderLeft: `1px solid ${tokens.colorNeutralStroke2}`, borderTopLeftRadius: tokens.borderRadiusLarge, borderBottomLeftRadius: tokens.borderRadiusLarge, transform: 'translateX(0)', transition: 'transform 200ms ease' },
   searchPanelBody: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, maxHeight: '72vh', overflowY: 'auto' },
   filterGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: tokens.spacingHorizontalS, alignItems: 'end' },
   filterField: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS },
@@ -129,30 +129,6 @@ const useStyles = makeStyles({
   filterPanelClose: { alignSelf: 'flex-end' },
   cardOrderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: tokens.spacingHorizontalS },
   cardOrderActions: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXXS },
-  skillContentField: {
-    boxSizing: 'border-box',
-    width: '550px',
-    minWidth: 0,
-    maxWidth: '100%'
-  },
-  skillContentEditor: {
-    boxSizing: 'border-box',
-    width: '550px',
-    minWidth: 0,
-    maxWidth: '100%',
-    borderRadius: tokens.borderRadiusMedium,
-    overflow: 'hidden',
-    '& > div': {
-      boxSizing: 'border-box',
-      width: '550px',
-      minWidth: 0,
-      maxWidth: '100%'
-    }
-  },
-  statusText: { color: tokens.colorNeutralForeground3 },
-  statusSuccess: { color: tokens.colorPaletteGreenForeground1 },
-  statusError: { color: tokens.colorPaletteRedForeground1 },
-  createPreview: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS },
   select: { minHeight: '32px', borderRadius: tokens.borderRadiusMedium, border: `1px solid ${tokens.colorNeutralStroke2}`, backgroundColor: tokens.colorNeutralBackground1, color: tokens.colorNeutralForeground1, padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`, font: 'inherit' },
   filterSummary: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS, alignItems: 'center' },
   compactStatCard: { display: 'inline-flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, minHeight: '92px', width: 'fit-content', minWidth: '180px', padding: tokens.spacingVerticalM },
@@ -230,17 +206,12 @@ export interface ISkillsFactoryDashboardProps {
   onSelectSkill: (skillId: string) => void;
   onSelectSite: (siteId: string) => void;
   onCreateSkill: (request: { siteUrl: string; skillName: string; skillContent: string; onProgress?: (message: string) => void }) => Promise<{ normalizedSkillName: string; skillFolderUrl: string; skillMarkdownUrl: string }>;
+  onDeleteSkillSite: (site: SharePointSite, skillFolderUrl: string) => Promise<void>;
   onRequestFullscreen: () => Promise<void>;
 }
 
 function compareText(left: string, right: string): number {
   return left.localeCompare(right, undefined, { sensitivity: 'base' });
-}
-
-function buildSkillMarkdownContent(normalizedSkillName: string, skillName: string, content: string): string {
-  const escapedNormalizedName: string = normalizedSkillName.replace(/"/g, '\\"');
-  const header: string = `---\nname: "${escapedNormalizedName}"\ndescription: ""\n---\n\n# ${skillName}\n\n\n`;
-  return `${header}${content}`;
 }
 
 function buildSiteSkillMap(sites: SharePointSite[], skills: Skill[]): Map<string, Set<string>> {
@@ -290,7 +261,7 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
   const [usageSettingsOpen, setUsageSettingsOpen] = React.useState<boolean>(false);
   const [skillsSearchOpen, setSkillsSearchOpen] = React.useState<boolean>(false);
   const [createSkillOpen, setCreateSkillOpen] = React.useState<boolean>(false);
-  const skillContentEditorRef = React.useRef<Editor>(null);
+  const [createSkillSubmitting, setCreateSkillSubmitting] = React.useState<boolean>(false);
   const [mySkillsOnly, setMySkillsOnly] = React.useState<boolean>(false);
   const [usageCardOrder, setUsageCardOrder] = React.useState<UsageCardKey[]>(DEFAULT_USAGE_CARD_ORDER);
   const [usageCardVisibility, setUsageCardVisibility] = React.useState<Record<UsageCardKey, boolean>>(DEFAULT_USAGE_CARD_VISIBILITY);
@@ -311,12 +282,6 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
   const setUsageCardVisible = React.useCallback((key: UsageCardKey, visible: boolean): void => {
     setUsageCardVisibility((current) => ({ ...current, [key]: visible }));
   }, []);
-  const [createSkillSiteId, setCreateSkillSiteId] = React.useState<string>('');
-  const [createSkillName, setCreateSkillName] = React.useState<string>('');
-  const [createSkillContent, setCreateSkillContent] = React.useState<string>('');
-  const [createSkillSubmitting, setCreateSkillSubmitting] = React.useState<boolean>(false);
-  const [createSkillStatus, setCreateSkillStatus] = React.useState<string>('');
-  const [createSkillError, setCreateSkillError] = React.useState<string>('');
 
   const theme = props.hostContext.theme === 'dark' ? webDarkTheme : webLightTheme;
   const siteSkillMap = React.useMemo(() => buildSiteSkillMap(props.sites, props.usageSkills), [props.sites, props.usageSkills]);
@@ -329,11 +294,6 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
       return matchesSearch && matchesOwner;
     });
   }, [mySkillsOnly, props.allSkills, props.searchText]);
-  const normalizedCreateSkillName: string = React.useMemo(() => normalizeSkillFolderName(createSkillName), [createSkillName]);
-  const selectedCreateSkillSite: SharePointSite | undefined = React.useMemo(
-    () => props.sites.find((site: SharePointSite) => site.id === createSkillSiteId),
-    [createSkillSiteId, props.sites]
-  );
 
   const visibleSites = React.useMemo(() => {
     const needle = props.siteSearchText.trim().toLowerCase();
@@ -396,12 +356,6 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
 
   React.useEffect(() => { setUsagePage(1); }, [props.siteSearchText, usageCoverageFilter, usageSkillFilterId, usageSiteFilterId, usageSortDirection, usageSortField]);
 
-  React.useEffect(() => {
-    if (createSkillOpen && !createSkillSiteId && props.sites.length) {
-      setCreateSkillSiteId(props.sites[0].id);
-    }
-  }, [createSkillOpen, createSkillSiteId, props.sites]);
-
   const handleUsageSortChange = React.useCallback((field: UsageSortField) => {
     if (usageSortField === field) {
       setUsageSortDirection((current) => (current === 'ascending' ? 'descending' : 'ascending'));
@@ -410,56 +364,6 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
     setUsageSortField(field);
     setUsageSortDirection(field === 'skills' ? 'descending' : 'ascending');
   }, [usageSortField]);
-
-  const handleCreateSkillSubmit = React.useCallback(async (): Promise<void> => {
-    const trimmedName: string = createSkillName.trim();
-    const trimmedContent: string = createSkillContent;
-    const site: SharePointSite | undefined = props.sites.find((item: SharePointSite) => item.id === createSkillSiteId);
-
-    setCreateSkillError('');
-    setCreateSkillStatus('');
-
-    if (!trimmedName) {
-      setCreateSkillError('Skill Name is required.');
-      return;
-    }
-
-    if (!site) {
-      setCreateSkillError('Site selection is required.');
-      return;
-    }
-
-    const normalizedName: string = normalizeSkillFolderName(trimmedName);
-    if (!normalizedName) {
-      setCreateSkillError('Skill Name must contain at least one letter or number.');
-      return;
-    }
-
-    if (!trimmedContent.trim()) {
-      setCreateSkillError('Skill Content is required.');
-      return;
-    }
-
-    setCreateSkillSubmitting(true);
-    try {
-      setCreateSkillStatus('Creating skill folder…');
-      const result = await props.onCreateSkill({
-        siteUrl: site.url,
-        skillName: trimmedName,
-        skillContent: buildSkillMarkdownContent(normalizedName, trimmedName, trimmedContent),
-        onProgress: (message: string) => setCreateSkillStatus(message)
-      });
-      setCreateSkillStatus(`Created ${result.normalizedSkillName} successfully.`);
-      setCreateSkillName('');
-      setCreateSkillContent('');
-      setCreateSkillSiteId('');
-      setCreateSkillOpen(false);
-    } catch (error: unknown) {
-      setCreateSkillError(error instanceof Error ? error.message : 'Failed to create the skill.');
-    } finally {
-      setCreateSkillSubmitting(false);
-    }
-  }, [createSkillContent, createSkillName, createSkillSiteId, props.onCreateSkill, props.sites]);
 
   const themeForHost = theme;
 
@@ -501,40 +405,44 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                 </Button>
               </div>
             </div>
-            {skillsSearchOpen ? (
-              <Card className={styles.searchPanel}>
-                <div className={styles.searchPanelBody}>
-                  <div className={styles.filterPanelHeader}>
-                    <div className={styles.filterPanelTitle}>
-                      <Text weight="semibold">Search</Text>
-                      <Caption1>Filter skills in the current tab.</Caption1>
-                    </div>
-                    <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close search" onClick={() => setSkillsSearchOpen(false)} />
+            <Card className={mergeClasses(styles.searchPanel, !skillsSearchOpen && styles.slidePanelHidden)}>
+              <div className={styles.searchPanelBody}>
+                <div className={styles.filterPanelHeader}>
+                  <div className={styles.filterPanelTitle}>
+                    <Text weight="semibold">Search</Text>
+                    <Caption1>Filter skills in the current tab.</Caption1>
                   </div>
-                  <Field className={styles.filterField} label="Search" orientation="horizontal">
-                    <Input value={props.searchText} onChange={(_, data) => props.onSearchTextChange(data.value)} placeholder="Search skills" />
-                  </Field>
-                  <Field className={styles.filterField} label="Ownership">
-                    <Checkbox
-                      checked={mySkillsOnly}
-                      onChange={(_, data) => setMySkillsOnly(Boolean(data.checked))}
-                      label="Only my skills"
-                    />
-                    <Caption1>Show skills owned by the current user.</Caption1>
-                  </Field>
+                  <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close search" onClick={() => setSkillsSearchOpen(false)} />
                 </div>
-              </Card>
-            ) : null}
-          </div>
-        )}
-
-        {props.activeTab === 'all-skills' && (
-          <div className={styles.usageLayout}>
-            <div className={styles.body}>
-                <div className={styles.fullWidthBody}><SkillsTable skills={filteredAllSkills} selectedSkillId={props.selectedSkill?.id} onSelectSkill={props.onSelectSkill} currentUserName={props.currentUserName} /></div>
-                <SkillDetailsPanel skill={props.selectedSkill} sites={props.sites.filter((site) => (props.selectedSkill?.siteIds || []).indexOf(site.id) !== -1)} siteCollections={props.siteCollections} />
+                <Field className={styles.filterField} label="Search" orientation="horizontal">
+                  <Input value={props.searchText} onChange={(_, data) => props.onSearchTextChange(data.value)} placeholder="Search skills" />
+                </Field>
+                <Field className={styles.filterField} label="Ownership">
+                  <Checkbox
+                    checked={mySkillsOnly}
+                    onChange={(_, data) => setMySkillsOnly(Boolean(data.checked))}
+                    label="Only my skills"
+                  />
+                  <Caption1>Show skills owned by the current user.</Caption1>
+                </Field>
               </div>
+            </Card>
+
+            <div className={styles.fullWidthBody}>
+              <SkillsTable skills={filteredAllSkills} selectedSkillId={props.selectedSkill?.id} onSelectSkill={props.onSelectSkill} currentUserName={props.currentUserName} />
             </div>
+
+            <div className={mergeClasses(styles.skillBlade, !props.selectedSkill && styles.slidePanelHidden)}>
+              <SkillDetailsPanel
+                skill={props.selectedSkill}
+                sites={props.sites}
+                siteCollections={props.siteCollections}
+                onClose={() => { if (props.selectedSkill) props.onSelectSkill(props.selectedSkill.id); }}
+                onDeleteSkillSite={props.onDeleteSkillSite}
+                onCreateSkill={props.onCreateSkill}
+              />
+            </div>
+          </div>
         )}
 
         {props.activeTab === 'usage' && (
@@ -573,8 +481,6 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                   onClick={() => {
                     setUsageFiltersOpen(false);
                     setUsageSettingsOpen(false);
-                    setCreateSkillStatus('');
-                    setCreateSkillError('');
                     setCreateSkillOpen((current) => !current);
                   }}
                 >
@@ -605,76 +511,66 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
               </div>
             </div>
 
-            {usageFiltersOpen ? (
-              <Card className={styles.usagePanel}>
-                <div className={styles.usagePanelBody}>
-                  <div className={styles.filterPanelHeader}>
-                    <div className={styles.filterPanelTitle}>
-                      <Text weight="semibold">Usage filters</Text>
-                      <Caption1>Slide-over panel for filtering the dashboard.</Caption1>
-                    </div>
-                    <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close usage filters" onClick={() => setUsageFiltersOpen(false)} />
+            <Card className={mergeClasses(styles.usagePanel, !usageFiltersOpen && styles.slidePanelHidden)}>
+              <div className={styles.usagePanelBody}>
+                <div className={styles.filterPanelHeader}>
+                  <div className={styles.filterPanelTitle}>
+                    <Text weight="semibold">Usage filters</Text>
+                    <Caption1>Slide-over panel for filtering the dashboard.</Caption1>
                   </div>
-                  <div className={styles.filterGrid}>
-                    <label className={styles.filterField}><Text weight="semibold">Skill</Text><select className={styles.select} value={usageSkillFilterId || ''} onChange={(event) => setUsageSkillFilterId(event.target.value || undefined)}><option value="">All skills</option>{props.usageSkills.slice().sort((a, b) => compareText(a.name, b.name)).map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</select></label>
-                    <label className={styles.filterField}><Text weight="semibold">Site</Text><select className={styles.select} value={usageSiteFilterId || ''} onChange={(event) => setUsageSiteFilterId(event.target.value || undefined)}><option value="">All sites</option>{props.sites.slice().sort((a, b) => compareText(a.name, b.name)).map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
-                    <label className={styles.filterField}><Text weight="semibold">Sites with/without skills</Text><select className={styles.select} value={usageCoverageFilter} onChange={(event) => setUsageCoverageFilter(event.target.value as CoverageFilter)}><option value="all">All sites</option><option value="with-skills">With skills</option><option value="without-skills">Without skills</option></select></label>
-                    <Field className={styles.filterField} label="Search sites"><Input value={props.siteSearchText} onChange={(_, data) => props.onSiteSearchTextChange(data.value)} placeholder="Search sites, URLs, or collections" /></Field>
-                  </div>
+                  <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close usage filters" onClick={() => setUsageFiltersOpen(false)} />
                 </div>
-              </Card>
-            ) : null}
+                <div className={styles.filterGrid}>
+                  <label className={styles.filterField}><Text weight="semibold">Skill</Text><select className={styles.select} value={usageSkillFilterId || ''} onChange={(event) => setUsageSkillFilterId(event.target.value || undefined)}><option value="">All skills</option>{props.usageSkills.slice().sort((a, b) => compareText(a.name, b.name)).map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</select></label>
+                  <label className={styles.filterField}><Text weight="semibold">Site</Text><select className={styles.select} value={usageSiteFilterId || ''} onChange={(event) => setUsageSiteFilterId(event.target.value || undefined)}><option value="">All sites</option>{props.sites.slice().sort((a, b) => compareText(a.name, b.name)).map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+                  <label className={styles.filterField}><Text weight="semibold">Sites with/without skills</Text><select className={styles.select} value={usageCoverageFilter} onChange={(event) => setUsageCoverageFilter(event.target.value as CoverageFilter)}><option value="all">All sites</option><option value="with-skills">With skills</option><option value="without-skills">Without skills</option></select></label>
+                  <Field className={styles.filterField} label="Search sites"><Input value={props.siteSearchText} onChange={(_, data) => props.onSiteSearchTextChange(data.value)} placeholder="Search sites, URLs, or collections" /></Field>
+                </div>
+              </div>
+            </Card>
 
-            {usageSettingsOpen ? (
-              <Card className={styles.usagePanel}>
-                <div className={mergeClasses(styles.usagePanelBody, styles.usagePanelBodyNoScroll)}>
-                  <div className={styles.filterPanelHeader}>
-                    <div className={styles.filterPanelTitle}>
-                      <Text weight="semibold">Full-width view settings</Text>
-                      <Caption1>Toggle and reorder the cards shown in the Usage dashboard.</Caption1>
-                    </div>
-                    <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close settings" onClick={() => setUsageSettingsOpen(false)} />
+            <Card className={mergeClasses(styles.usagePanel, !usageSettingsOpen && styles.slidePanelHidden)}>
+              <div className={mergeClasses(styles.usagePanelBody, styles.usagePanelBodyNoScroll)}>
+                <div className={styles.filterPanelHeader}>
+                  <div className={styles.filterPanelTitle}>
+                    <Text weight="semibold">Full-width view settings</Text>
+                    <Caption1>Toggle and reorder the cards shown in the Usage dashboard.</Caption1>
                   </div>
-                  <div className={styles.filterPanel}>
-                    {usageCardOrder.map((key, index) => {
-                      const definition = USAGE_CARD_DEFINITIONS.find((candidate) => candidate.key === key);
-                      const label = definition ? definition.label : key;
-                      return (
-                        <div key={key} className={styles.cardOrderRow}>
-                          <Checkbox checked={usageCardVisibility[key]} onChange={(_, data) => setUsageCardVisible(key, Boolean(data.checked))} label={label} />
-                          <div className={styles.cardOrderActions}>
-                            <Button
-                              appearance="subtle"
-                              size="small"
-                              icon={<ChevronUp16Regular />}
-                              aria-label={`Move ${label} up`}
-                              disabled={index === 0}
-                              onClick={() => moveUsageCard(key, -1)}
-                            />
-                            <Button
-                              appearance="subtle"
-                              size="small"
-                              icon={<ChevronDown16Regular />}
-                              aria-label={`Move ${label} down`}
-                              disabled={index === usageCardOrder.length - 1}
-                              onClick={() => moveUsageCard(key, 1)}
-                            />
-                          </div>
+                  <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close settings" onClick={() => setUsageSettingsOpen(false)} />
+                </div>
+                <div className={styles.filterPanel}>
+                  {usageCardOrder.map((key, index) => {
+                    const definition = USAGE_CARD_DEFINITIONS.find((candidate) => candidate.key === key);
+                    const label = definition ? definition.label : key;
+                    return (
+                      <div key={key} className={styles.cardOrderRow}>
+                        <Checkbox checked={usageCardVisibility[key]} onChange={(_, data) => setUsageCardVisible(key, Boolean(data.checked))} label={label} />
+                        <div className={styles.cardOrderActions}>
+                          <Button
+                            appearance="subtle"
+                            size="small"
+                            icon={<ChevronUp16Regular />}
+                            aria-label={`Move ${label} up`}
+                            disabled={index === 0}
+                            onClick={() => moveUsageCard(key, -1)}
+                          />
+                          <Button
+                            appearance="subtle"
+                            size="small"
+                            icon={<ChevronDown16Regular />}
+                            aria-label={`Move ${label} down`}
+                            disabled={index === usageCardOrder.length - 1}
+                            onClick={() => moveUsageCard(key, 1)}
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </Card>
-            ) : null}
+              </div>
+            </Card>
 
-            {createSkillOpen ? (
-              <Card className={styles.createPanel}>
-                {createSkillSubmitting ? (
-                  <div className={styles.createPanelOverlay}>
-                    <Spinner label={createSkillStatus || 'Creating skill…'} />
-                  </div>
-                ) : null}
+            <Card className={mergeClasses(styles.createPanel, !createSkillOpen && styles.slidePanelHidden)}>
                 <div className={styles.createPanelBody}>
                   <div className={styles.filterPanelHeader}>
                     <div className={styles.filterPanelTitle}>
@@ -683,52 +579,14 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                     </div>
                     <Button className={styles.filterPanelClose} appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close create skill" disabled={createSkillSubmitting} onClick={() => setCreateSkillOpen(false)} />
                   </div>
-                  {createSkillError ? <Body1 className={styles.statusError}>{createSkillError}</Body1> : null}
-                  {createSkillStatus && !createSkillSubmitting ? <Body1 className={styles.statusText}>{createSkillStatus}</Body1> : null}
-                  <div className={styles.createPanelForm}>
-                    <Field className={styles.filterField} label="Site" required>
-                      <select className={styles.select} value={createSkillSiteId} disabled={createSkillSubmitting} onChange={(event) => setCreateSkillSiteId(event.target.value)}>
-                        <option value="">Select a site</option>
-                        {props.sites.slice().sort((a, b) => compareText(a.name, b.name)).map((site) => (
-                          <option key={site.id} value={site.id}>
-                            {site.name}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field className={styles.filterField} label="Skill Name" required>
-                      <Input value={createSkillName} disabled={createSkillSubmitting} onChange={(_, data) => setCreateSkillName(data.value)} placeholder='Example: "Build HTML Dashboard!"' />
-                      <Caption1>Normalized folder name: {normalizedCreateSkillName || '—'}</Caption1>
-                    </Field>
-                    <Field
-                      className={mergeClasses(styles.filterField, styles.createPanelFormFullWidth, styles.skillContentField)}
-                      style={{ width: 550, minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
-                      label="Skill Content"
-                      required
-                    >
-                      <div className={styles.skillContentEditor}>
-                        <Editor
-                          ref={skillContentEditorRef}
-                          initialValue={createSkillContent}
-                          previewStyle="vertical"
-                          initialEditType="wysiwyg"
-                          useCommandShortcut={true}
-                          placeholder="Write the SKILL.md content…"
-                          onChange={() => setCreateSkillContent(skillContentEditorRef.current?.getInstance().getMarkdown() ?? '')}
-                        />
-                      </div>
-                    </Field>
-                    <div className={mergeClasses(styles.createPreview, styles.createPanelFormFullWidth)}>
-                      <Caption1>Folder path: {selectedCreateSkillSite ? `${selectedCreateSkillSite.name} / Agent Assets / skills / ${normalizedCreateSkillName || 'skill-name'}` : 'Select a site to preview the path.'}</Caption1>
-                      <Caption1>SKILL.md path: {selectedCreateSkillSite ? `${selectedCreateSkillSite.name} / Agent Assets / skills / ${normalizedCreateSkillName || 'skill-name'} / SKILL.md` : 'Select a site to preview the path.'}</Caption1>
-                    </div>
-                    <Button className={styles.createPanelFormFullWidth} appearance="primary" onClick={() => { void handleCreateSkillSubmit(); }} disabled={createSkillSubmitting || !createSkillName.trim() || !createSkillSiteId}>
-                      {createSkillSubmitting ? 'Creating…' : 'Create Skill'}
-                    </Button>
-                  </div>
+                  <CreateSkillForm
+                    sites={props.sites}
+                    onCreateSkill={props.onCreateSkill}
+                    onCreated={() => setCreateSkillOpen(false)}
+                    onSubmittingChange={setCreateSkillSubmitting}
+                  />
                 </div>
               </Card>
-            ) : null}
 
             <div className={styles.kpiGrid}>
               {[

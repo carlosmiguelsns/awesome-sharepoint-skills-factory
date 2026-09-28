@@ -41,6 +41,12 @@ export interface ICreateSkillResult {
   skillMarkdownUrl: string;
 }
 
+export interface IDeleteSkillRequest {
+  siteUrl: string;
+  skillFolderUrl: string;
+  onProgress?: (message: string) => void;
+}
+
 interface IGraphMeResponse {
   displayName?: string;
   mail?: string;
@@ -283,6 +289,54 @@ export class TenantSharePointDataService {
       skillFolderUrl: `${request.siteUrl.replace(/\/$/, '')}/${skillFolderServerRelativeUrl.replace(/^\//, '')}`,
       skillMarkdownUrl: `${request.siteUrl.replace(/\/$/, '')}/${skillFolderServerRelativeUrl.replace(/^\//, '')}/SKILL.md`
     };
+  }
+
+  public async isCurrentUserSiteCollectionAdminAsync(siteUrl: string): Promise<boolean> {
+    const response: SPHttpClientResponse = await this.spHttpClient.get(
+      `${siteUrl}/_api/web/currentuser?$select=IsSiteAdmin`,
+      SPHttpClient.configurations.v1
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data: { IsSiteAdmin?: boolean; d?: { IsSiteAdmin?: boolean } } = (await response.json()) as {
+      IsSiteAdmin?: boolean;
+      d?: { IsSiteAdmin?: boolean };
+    };
+    return Boolean(data.IsSiteAdmin ?? data.d?.IsSiteAdmin);
+  }
+
+  public async deleteSkillAsync(request: IDeleteSkillRequest): Promise<void> {
+    const reportProgress = (message: string): void => request.onProgress?.(message);
+
+    reportProgress('Checking permissions…');
+    const isAuthorized: boolean = await this.isCurrentUserSiteCollectionAdminAsync(request.siteUrl);
+    if (!isAuthorized) {
+      throw new Error('Only Site Collection Administrators or SharePoint Admins can delete a skill.');
+    }
+
+    const folderServerRelativeUrl: string = new URL(request.skillFolderUrl).pathname;
+
+    reportProgress('Deleting skill folder…');
+    const deleteResponse: SPHttpClientResponse = await this.spHttpClient.post(
+      `${request.siteUrl}/_api/web/GetFolderByServerRelativeUrl('${escapeODataString(folderServerRelativeUrl)}')`,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          Accept: 'application/json;odata=nometadata',
+          'X-HTTP-Method': 'DELETE',
+          'IF-MATCH': '*'
+        }
+      }
+    );
+
+    if (!deleteResponse.ok) {
+      throw new Error('Failed to delete the skill folder.');
+    }
+
+    reportProgress('Finalizing…');
   }
 
   private async getTenantSitesAsync(): Promise<SharePointSite[]> {

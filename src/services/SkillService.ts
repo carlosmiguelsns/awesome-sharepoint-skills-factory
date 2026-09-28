@@ -1,6 +1,6 @@
 import type { Skill } from '../models';
 import type { MSGraphClientFactory, SPHttpClient } from '@microsoft/sp-http';
-import { TenantSharePointDataService, type ICreateSkillRequest, type ICreateSkillResult } from './TenantSharePointDataService';
+import { TenantSharePointDataService, type ICreateSkillRequest, type ICreateSkillResult, type IDeleteSkillRequest } from './TenantSharePointDataService';
 
 export interface ISkillQuery {
   searchText?: string;
@@ -83,5 +83,21 @@ export class SkillService {
     );
 
     return tenantService.createSkillAsync(request);
+  }
+
+  public async deleteSkill(request: IDeleteSkillRequest): Promise<void> {
+    if (!this.spHttpClient || !this.siteUrl) {
+      throw new Error('SharePoint delete support is not available.');
+    }
+
+    const tenantService: TenantSharePointDataService = new TenantSharePointDataService(
+      this.spHttpClient,
+      this.siteUrl,
+      this.msGraphClientFactory,
+      this.currentUserName,
+      this.currentUserEmail
+    );
+
+    return tenantService.deleteSkillAsync(request);
   }
 }

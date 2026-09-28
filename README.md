@@ -22,8 +22,13 @@ It combines data from:
 ### Inline experience
 
 - Shows the current user’s top 5 skills on load, with no chat/message input required
-- Supports a compact “My Skills” view
-- Expands into the full dashboard when needed
+- Understands natural-language requests typed in the Copilot chat, e.g.:
+  - "List my top skills used" → top 5 (the default)
+  - "Show me my top 3 skills used" → top 3
+  - "Show me all my skills" → every skill the user owns
+  - "I want to create a new skill" → opens the create-skill form inline, no need to expand
+- Offers the same requests as clickable “suggested prompt” pills, so users don’t have to type them
+- Clicking a skill row switches to the fullscreen dashboard with that skill’s details/comparison panel already open
 
 ### Fullscreen dashboard
 
@@ -48,10 +53,21 @@ The project is organized around clear layers:
 - `src/components/inline` – compact inline skill views
 - `src/components/fullscreen` – full dashboard and analysis panels
 - `src/components/SkillCards.tsx` – reusable skill cards
+- `src/components/CreateSkillForm.tsx` – shared create-skill form, embedded both in the inline view and in the fullscreen dashboard's slide-over panel
 - `src/components/SkillsFactoryApp.tsx` – app orchestration and loading flow
 - `src/models` – skill, site, site collection, and usage models
 - `src/services` – Graph, SharePoint, and skill data access
 - `src/utils` – helper logic for dates, text, and site parsing
+
+## Natural-language input
+
+The component's Copilot tool declares a small `propertiesSchema` (`src/SharePointSkillsFactoryCopilotComponentProperties.ts`) that Copilot parses from the user's chat message and hands to the component as `this.properties`:
+
+- `intent`: `'listSkills'` or `'createSkill'`
+- `skillCount`: an explicit number of skills to show (e.g. "top 3")
+- `showAllSkills`: true when the user asks for every skill they own
+
+These drive what the inline view opens with — e.g. "I want to create a new skill" opens the create-skill form inline instead of the skills list, with no need to expand to fullscreen. The inline view also exposes the same set of requests as clickable "suggested prompt" pills (`src/components/inline/SuggestedPromptPills.tsx`) that update the view instantly, without a chat round-trip. With no match, the component defaults to listing the user's top 5 skills.
 
 ## Data flow
 
@@ -128,6 +144,7 @@ This produces the package artifacts for deployment to the target SharePoint envi
 - The loading experience tracks discovery progress while Graph site enumeration completes.
 - Search and filtering work across skill names, descriptions, owners, suggested prompts, and site metadata.
 - The usage dashboard can highlight skill coverage by site and support drill-down exploration of where specific skills are active.
+- The inline view understands natural-language intent (list top N / list all / create a new skill) via the tool's `propertiesSchema`, and offers the same actions as clickable suggested-prompt pills.
 
 ## Repository structure
 

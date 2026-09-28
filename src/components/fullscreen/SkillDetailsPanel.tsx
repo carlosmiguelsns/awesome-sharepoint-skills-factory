@@ -22,18 +22,20 @@ import {
   DialogTitle,
   Input,
   Link,
+  Spinner,
   Text,
   makeStyles,
   mergeClasses,
   tokens,
   type TableColumnDefinition
 } from '@fluentui/react-components';
-import { Search24Regular } from '@fluentui/react-icons';
+import { Delete24Regular, Dismiss24Regular, DocumentCopy24Regular, Search24Regular } from '@fluentui/react-icons';
 import { Viewer } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
 import type { SharePointSite, SiteCollection, Skill, SkillSiteRevision } from '../../models';
 import { formatLongDate } from '../../utils/dateHelpers';
+import type { ICreateSkillRequest, ICreateSkillResult } from '../../services/TenantSharePointDataService';
 import SkillCompareDialog from './SkillCompareDialog';
 
 const SITES_PAGE_SIZE: number = 8;
@@ -85,7 +87,8 @@ const useStyles = makeStyles({
     maxWidth: '360px'
   },
   sitesGridCard: {
-    overflow: 'hidden'
+    overflow: 'hidden',
+    boxShadow: 'none'
   },
   sitesGrid: {
     width: '100%'
@@ -124,6 +127,27 @@ const useStyles = makeStyles({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: tokens.spacingHorizontalS
+  },
+  deleteError: {
+    color: tokens.colorPaletteRedForeground1
+  },
+  deleteConfirmButton: {
+    backgroundColor: tokens.colorPaletteRedBackground3,
+    color: tokens.colorPaletteRedForeground2
+  },
+  cloneField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS
+  },
+  select: {
+    minHeight: '32px',
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+    color: tokens.colorNeutralForeground1,
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
+    font: 'inherit'
   }
 });
 
@@ -152,6 +176,19 @@ export interface ISkillDetailsPanelProps {
   skill?: Skill;
   sites: SharePointSite[];
   siteCollections: SiteCollection[];
+  onClose?: () => void;
+  onDeleteSkillSite: (site: SharePointSite, skillFolderUrl: string) => Promise<void>;
+  onCreateSkill: (request: ICreateSkillRequest) => Promise<ICreateSkillResult>;
+}
+
+interface IDeleteTarget {
+  site: SharePointSite;
+  skillFolderUrl: string;
+}
+
+interface ICloneSource {
+  site: SharePointSite;
+  skillContent: string;
 }
 
 export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React.ReactElement {
@@ -162,6 +199,14 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
   const [isCompareOpen, setIsCompareOpen] = React.useState<boolean>(false);
   const [siteSearchText, setSiteSearchText] = React.useState<string>('');
   const [sitePage, setSitePage] = React.useState<number>(1);
+  const [deleteTarget, setDeleteTarget] = React.useState<IDeleteTarget | undefined>(undefined);
+  const [isDeleting, setIsDeleting] = React.useState<boolean>(false);
+  const [deleteError, setDeleteError] = React.useState<string>('');
+  const [cloneSource, setCloneSource] = React.useState<ICloneSource | undefined>(undefined);
+  const [cloneTargetCollectionId, setCloneTargetCollectionId] = React.useState<string | undefined>(undefined);
+  const [isCloning, setIsCloning] = React.useState<boolean>(false);
+  const [cloneStatus, setCloneStatus] = React.useState<string>('');
+  const [cloneError, setCloneError] = React.useState<string>('');
 
   React.useEffect(() => {
     setPreviewSiteId(undefined);
@@ -169,7 +214,29 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
     setIsCompareOpen(false);
     setSiteSearchText('');
     setSitePage(1);
+    setDeleteTarget(undefined);
+    setDeleteError('');
+    setCloneSource(undefined);
+    setCloneTargetCollectionId(undefined);
+    setCloneError('');
   }, [skill?.id]);
+
+  const handleConfirmDelete = React.useCallback(async (): Promise<void> => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      await props.onDeleteSkillSite(deleteTarget.site, deleteTarget.skillFolderUrl);
+      setDeleteTarget(undefined);
+    } catch (error: unknown) {
+      setDeleteError(error instanceof Error ? error.message : 'Failed to delete the skill.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [deleteTarget, props]);
 
   const revisionForSite = React.useCallback(
     (siteId: string): SkillSiteRevision | undefined => (skill?.siteRevisions || []).find((revision: SkillSiteRevision) => revision.siteId === siteId),
@@ -190,6 +257,53 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
     (site: SharePointSite): SiteCollection | undefined => props.siteCollections.find((collection: SiteCollection) => collection.id === site.siteCollectionId),
     [props.siteCollections]
   );
+
+  const resolveSiteForCollection = React.useCallback(
+    (collectionId: string): SharePointSite | undefined => {
+      const candidates: SharePointSite[] = props.sites.filter((site: SharePointSite) => site.siteCollectionId === collectionId);
+      const collection: SiteCollection | undefined = props.siteCollections.find((item: SiteCollection) => item.id === collectionId);
+      const rootSite: SharePointSite | undefined = candidates.find(
+        (site: SharePointSite) => site.url.replace(/\/$/, '') === (collection?.url || '').replace(/\/$/, '')
+      );
+      return rootSite || candidates[0];
+    },
+    [props.sites, props.siteCollections]
+  );
+
+  const cloneTargetCollections: SiteCollection[] = React.useMemo(
+    () => (skill ? props.siteCollections.filter((collection: SiteCollection) => skill.siteCollectionIds.indexOf(collection.id) === -1) : []),
+    [props.siteCollections, skill]
+  );
+
+  const handleConfirmClone = React.useCallback(async (): Promise<void> => {
+    if (!cloneSource || !cloneTargetCollectionId || !skill) {
+      return;
+    }
+
+    const targetSite: SharePointSite | undefined = resolveSiteForCollection(cloneTargetCollectionId);
+    if (!targetSite) {
+      setCloneError('Could not resolve a destination site for that site collection.');
+      return;
+    }
+
+    setIsCloning(true);
+    setCloneError('');
+    try {
+      setCloneStatus('Copying skill…');
+      await props.onCreateSkill({
+        siteUrl: targetSite.url,
+        skillName: skill.name,
+        skillContent: cloneSource.skillContent,
+        onProgress: (message: string) => setCloneStatus(message)
+      });
+      setCloneSource(undefined);
+      setCloneTargetCollectionId(undefined);
+    } catch (error: unknown) {
+      setCloneError(error instanceof Error ? error.message : 'Failed to copy the skill.');
+    } finally {
+      setIsCloning(false);
+    }
+  }, [cloneSource, cloneTargetCollectionId, props, resolveSiteForCollection, skill]);
 
   const skillSites: SharePointSite[] = React.useMemo(
     () => (skill ? props.sites.filter((site: SharePointSite) => skill.siteIds.indexOf(site.id) !== -1) : []),
@@ -218,8 +332,8 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
 
   const hasCompareColumn: boolean = skillSites.length > 1;
   const columnWidths: Record<string, string> = hasCompareColumn
-    ? { compare: '24px', site: '23%', folder: '38.5%', file: '38.5%' }
-    : { site: '25%', folder: '37.5%', file: '37.5%' };
+    ? { compare: '28px', site: '19%', folder: '35%', file: '35%', actions: '84px' }
+    : { site: '20%', folder: '36%', file: '36%', actions: '84px' };
 
   const columns: Array<TableColumnDefinition<SharePointSite>> = React.useMemo(() => {
     const definitions: Array<TableColumnDefinition<SharePointSite>> = [];
@@ -294,16 +408,49 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
             </div>
           );
         }
+      }),
+      createTableColumn<SharePointSite>({
+        columnId: 'actions',
+        renderHeaderCell: () => null,
+        renderCell: (site: SharePointSite) => {
+          const revision: SkillSiteRevision | undefined = revisionForSite(site.id);
+          const skillFolderUrl: string | undefined = revision?.skillFolderUrl;
+          const skillContent: string | undefined = revision?.rawContent;
+          return (
+            <>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<DocumentCopy24Regular />}
+                aria-label={`Copy skill from ${site.name} to another site collection`}
+                disabled={!skillContent || !cloneTargetCollections.length}
+                onClick={() => skillContent && setCloneSource({ site, skillContent })}
+              />
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<Delete24Regular />}
+                aria-label={`Delete skill from ${site.name}`}
+                disabled={!skillFolderUrl}
+                onClick={() => skillFolderUrl && setDeleteTarget({ site, skillFolderUrl })}
+              />
+            </>
+          );
+        }
       })
     );
 
     return definitions;
-  }, [compareSiteIds, hasCompareColumn, revisionForSite, siteCollectionForSite, skill, styles, toggleCompareSite]);
+  }, [cloneTargetCollections.length, compareSiteIds, hasCompareColumn, revisionForSite, siteCollectionForSite, skill, styles, toggleCompareSite]);
 
   if (!skill) {
     return (
       <Card className={styles.card}>
-        <CardHeader header={<Text weight="semibold">Skill details</Text>} description={<Body1>Select a skill to inspect its usage.</Body1>} />
+        <CardHeader
+          header={<Text weight="semibold">Skill details</Text>}
+          description={<Body1>Select a skill to inspect its usage.</Body1>}
+          action={props.onClose ? <Button appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close skill details" onClick={props.onClose} /> : undefined}
+        />
       </Card>
     );
   }
@@ -313,7 +460,10 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
 
   return (
     <Card className={styles.card}>
-      <CardHeader header={<Text weight="semibold">{skill.name}</Text>} />
+      <CardHeader
+        header={<Text weight="semibold">{skill.name}</Text>}
+        action={props.onClose ? <Button appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close skill details" onClick={props.onClose} /> : undefined}
+      />
 
       <Dialog open={previewSiteId !== undefined} onOpenChange={(_, data) => setPreviewSiteId(data.open ? previewSiteId : undefined)}>
         <DialogSurface className={styles.previewDialogSurface}>
@@ -338,6 +488,82 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
       {compareSiteA && compareSiteB ? (
         <SkillCompareDialog open={isCompareOpen} onOpenChange={setIsCompareOpen} skill={skill} siteA={compareSiteA} siteB={compareSiteB} />
       ) : null}
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(_, data) => { if (!data.open && !isDeleting) { setDeleteTarget(undefined); setDeleteError(''); } }}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Delete this skill?</DialogTitle>
+            <DialogContent>
+              {isDeleting ? (
+                <Spinner label="Deleting the skill folder and its contents…" />
+              ) : (
+                <>
+                  <Body1>
+                    This permanently deletes the “{skill.name}” skill folder from <strong>{deleteTarget?.site.name}</strong> - including SKILL.md and everything else inside the folder. This can’t be undone.
+                  </Body1>
+                  <Body1>Only Site Collection Administrators or SharePoint Admins for this site can do this.</Body1>
+                </>
+              )}
+              {deleteError ? <Body1 className={styles.deleteError}>{deleteError}</Body1> : null}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" disabled={isDeleting} onClick={() => { setDeleteTarget(undefined); setDeleteError(''); }}>
+                Cancel
+              </Button>
+              <Button className={styles.deleteConfirmButton} disabled={isDeleting} onClick={() => { void handleConfirmDelete(); }}>
+                {isDeleting ? 'Deleting…' : 'Delete skill'}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      <Dialog open={Boolean(cloneSource)} onOpenChange={(_, data) => { if (!data.open && !isCloning) { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); } }}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Copy skill to another site collection</DialogTitle>
+            <DialogContent>
+              {isCloning ? (
+                <Spinner label={cloneStatus || 'Copying skill…'} />
+              ) : (
+                <>
+                  <Body1>
+                    Copies the “{skill.name}” SKILL.md content from <strong>{cloneSource?.site.name}</strong> into a new skill folder in the site collection you choose below.
+                  </Body1>
+                  {cloneTargetCollections.length ? (
+                    <label className={styles.cloneField}>
+                      <Text weight="semibold">Destination site collection</Text>
+                      <select
+                        className={styles.select}
+                        value={cloneTargetCollectionId || ''}
+                        onChange={(event) => setCloneTargetCollectionId(event.target.value || undefined)}
+                      >
+                        <option value="">Select a site collection</option>
+                        {cloneTargetCollections.map((collection: SiteCollection) => (
+                          <option key={collection.id} value={collection.id}>
+                            {collection.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <Body1 className={styles.metaLabel}>This skill already exists in every discovered site collection.</Body1>
+                  )}
+                </>
+              )}
+              {cloneError ? <Body1 className={styles.deleteError}>{cloneError}</Body1> : null}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" disabled={isCloning} onClick={() => { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); }}>
+                Cancel
+              </Button>
+              <Button appearance="primary" disabled={isCloning || !cloneTargetCollectionId} onClick={() => { void handleConfirmClone(); }}>
+                {isCloning ? 'Copying…' : 'Copy skill'}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
 
       <div className={styles.root}>
         <div className={styles.section}>
@@ -375,9 +601,9 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
                     {({ renderHeaderCell, columnId }) => (
                       <DataGridHeaderCell
                         style={
-                          columnId === 'compare'
+                          columnId === 'compare' || columnId === 'actions'
                             ? { width: columnWidths[columnId as string], padding: 0 }
-                            : { width: columnWidths[columnId as string] }
+                            : { width: columnWidths[columnId as string], paddingLeft: tokens.spacingHorizontalM, paddingRight: tokens.spacingHorizontalM }
                         }
                       >
                         {renderHeaderCell()}
@@ -391,9 +617,9 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
                       {({ renderCell, columnId }) => (
                         <DataGridCell
                           style={
-                            columnId === 'compare'
+                            columnId === 'compare' || columnId === 'actions'
                               ? { width: columnWidths[columnId as string], padding: 0, justifyContent: 'center' }
-                              : { width: columnWidths[columnId as string] }
+                              : { width: columnWidths[columnId as string], paddingLeft: tokens.spacingHorizontalM, paddingRight: tokens.spacingHorizontalM }
                           }
                         >
                           {renderCell(item)}

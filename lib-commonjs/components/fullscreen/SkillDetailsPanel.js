@@ -57,7 +57,8 @@ var useStyles = (0, react_components_1.makeStyles)({
         maxWidth: '360px'
     },
     sitesGridCard: {
-        overflow: 'hidden'
+        overflow: 'hidden',
+        boxShadow: 'none'
     },
     sitesGrid: {
         width: '100%'
@@ -96,6 +97,27 @@ var useStyles = (0, react_components_1.makeStyles)({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: react_components_1.tokens.spacingHorizontalS
+    },
+    deleteError: {
+        color: react_components_1.tokens.colorPaletteRedForeground1
+    },
+    deleteConfirmButton: {
+        backgroundColor: react_components_1.tokens.colorPaletteRedBackground3,
+        color: react_components_1.tokens.colorPaletteRedForeground2
+    },
+    cloneField: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: react_components_1.tokens.spacingVerticalXXS
+    },
+    select: {
+        minHeight: '32px',
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
+        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
+        color: react_components_1.tokens.colorNeutralForeground1,
+        padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS),
+        font: 'inherit'
     }
 });
 function formatBytes(size) {
@@ -115,6 +137,7 @@ function formatBytes(size) {
     return "".concat(value.toFixed(value >= 10 ? 0 : 1), " ").concat(units[unitIndex]);
 }
 function SkillDetailsPanel(props) {
+    var _this = this;
     var _a, _b, _c;
     var styles = useStyles();
     var skill = props.skill;
@@ -123,13 +146,55 @@ function SkillDetailsPanel(props) {
     var _f = React.useState(false), isCompareOpen = _f[0], setIsCompareOpen = _f[1];
     var _g = React.useState(''), siteSearchText = _g[0], setSiteSearchText = _g[1];
     var _h = React.useState(1), sitePage = _h[0], setSitePage = _h[1];
+    var _j = React.useState(undefined), deleteTarget = _j[0], setDeleteTarget = _j[1];
+    var _k = React.useState(false), isDeleting = _k[0], setIsDeleting = _k[1];
+    var _l = React.useState(''), deleteError = _l[0], setDeleteError = _l[1];
+    var _m = React.useState(undefined), cloneSource = _m[0], setCloneSource = _m[1];
+    var _o = React.useState(undefined), cloneTargetCollectionId = _o[0], setCloneTargetCollectionId = _o[1];
+    var _p = React.useState(false), isCloning = _p[0], setIsCloning = _p[1];
+    var _q = React.useState(''), cloneStatus = _q[0], setCloneStatus = _q[1];
+    var _r = React.useState(''), cloneError = _r[0], setCloneError = _r[1];
     React.useEffect(function () {
         setPreviewSiteId(undefined);
         setCompareSiteIds([]);
         setIsCompareOpen(false);
         setSiteSearchText('');
         setSitePage(1);
+        setDeleteTarget(undefined);
+        setDeleteError('');
+        setCloneSource(undefined);
+        setCloneTargetCollectionId(undefined);
+        setCloneError('');
     }, [skill === null || skill === void 0 ? void 0 : skill.id]);
+    var handleConfirmDelete = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+        var error_1;
+        return tslib_1.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (!deleteTarget) {
+                        return [2 /*return*/];
+                    }
+                    setIsDeleting(true);
+                    setDeleteError('');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, 4, 5]);
+                    return [4 /*yield*/, props.onDeleteSkillSite(deleteTarget.site, deleteTarget.skillFolderUrl)];
+                case 2:
+                    _a.sent();
+                    setDeleteTarget(undefined);
+                    return [3 /*break*/, 5];
+                case 3:
+                    error_1 = _a.sent();
+                    setDeleteError(error_1 instanceof Error ? error_1.message : 'Failed to delete the skill.');
+                    return [3 /*break*/, 5];
+                case 4:
+                    setIsDeleting(false);
+                    return [7 /*endfinally*/];
+                case 5: return [2 /*return*/];
+            }
+        });
+    }); }, [deleteTarget, props]);
     var revisionForSite = React.useCallback(function (siteId) { return ((skill === null || skill === void 0 ? void 0 : skill.siteRevisions) || []).find(function (revision) { return revision.siteId === siteId; }); }, [skill]);
     var toggleCompareSite = React.useCallback(function (siteId, checked) {
         setCompareSiteIds(function (current) {
@@ -140,6 +205,54 @@ function SkillDetailsPanel(props) {
         });
     }, []);
     var siteCollectionForSite = React.useCallback(function (site) { return props.siteCollections.find(function (collection) { return collection.id === site.siteCollectionId; }); }, [props.siteCollections]);
+    var resolveSiteForCollection = React.useCallback(function (collectionId) {
+        var candidates = props.sites.filter(function (site) { return site.siteCollectionId === collectionId; });
+        var collection = props.siteCollections.find(function (item) { return item.id === collectionId; });
+        var rootSite = candidates.find(function (site) { return site.url.replace(/\/$/, '') === ((collection === null || collection === void 0 ? void 0 : collection.url) || '').replace(/\/$/, ''); });
+        return rootSite || candidates[0];
+    }, [props.sites, props.siteCollections]);
+    var cloneTargetCollections = React.useMemo(function () { return (skill ? props.siteCollections.filter(function (collection) { return skill.siteCollectionIds.indexOf(collection.id) === -1; }) : []); }, [props.siteCollections, skill]);
+    var handleConfirmClone = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+        var targetSite, error_2;
+        return tslib_1.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (!cloneSource || !cloneTargetCollectionId || !skill) {
+                        return [2 /*return*/];
+                    }
+                    targetSite = resolveSiteForCollection(cloneTargetCollectionId);
+                    if (!targetSite) {
+                        setCloneError('Could not resolve a destination site for that site collection.');
+                        return [2 /*return*/];
+                    }
+                    setIsCloning(true);
+                    setCloneError('');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, 4, 5]);
+                    setCloneStatus('Copying skill…');
+                    return [4 /*yield*/, props.onCreateSkill({
+                            siteUrl: targetSite.url,
+                            skillName: skill.name,
+                            skillContent: cloneSource.skillContent,
+                            onProgress: function (message) { return setCloneStatus(message); }
+                        })];
+                case 2:
+                    _a.sent();
+                    setCloneSource(undefined);
+                    setCloneTargetCollectionId(undefined);
+                    return [3 /*break*/, 5];
+                case 3:
+                    error_2 = _a.sent();
+                    setCloneError(error_2 instanceof Error ? error_2.message : 'Failed to copy the skill.');
+                    return [3 /*break*/, 5];
+                case 4:
+                    setIsCloning(false);
+                    return [7 /*endfinally*/];
+                case 5: return [2 /*return*/];
+            }
+        });
+    }); }, [cloneSource, cloneTargetCollectionId, props, resolveSiteForCollection, skill]);
     var skillSites = React.useMemo(function () { return (skill ? props.sites.filter(function (site) { return skill.siteIds.indexOf(site.id) !== -1; }) : []); }, [props.sites, skill]);
     var filteredSkillSites = React.useMemo(function () {
         var needle = siteSearchText.trim().toLowerCase();
@@ -160,8 +273,8 @@ function SkillDetailsPanel(props) {
     }, [siteSearchText]);
     var hasCompareColumn = skillSites.length > 1;
     var columnWidths = hasCompareColumn
-        ? { compare: '24px', site: '23%', folder: '38.5%', file: '38.5%' }
-        : { site: '25%', folder: '37.5%', file: '37.5%' };
+        ? { compare: '28px', site: '19%', folder: '35%', file: '35%', actions: '84px' }
+        : { site: '20%', folder: '36%', file: '36%', actions: '84px' };
     var columns = React.useMemo(function () {
         var definitions = [];
         if (hasCompareColumn) {
@@ -205,17 +318,28 @@ function SkillDetailsPanel(props) {
                     React.createElement(react_components_1.Link, { className: styles.truncate, title: fileName, onClick: function () { return setPreviewSiteId(site.id); } }, fileName),
                     React.createElement(react_components_1.Caption1, { className: (0, react_components_1.mergeClasses)(styles.metaLabel, styles.truncate), title: fileMeta }, fileMeta)));
             }
+        }), (0, react_components_1.createTableColumn)({
+            columnId: 'actions',
+            renderHeaderCell: function () { return null; },
+            renderCell: function (site) {
+                var revision = revisionForSite(site.id);
+                var skillFolderUrl = revision === null || revision === void 0 ? void 0 : revision.skillFolderUrl;
+                var skillContent = revision === null || revision === void 0 ? void 0 : revision.rawContent;
+                return (React.createElement(React.Fragment, null,
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: React.createElement(react_icons_1.DocumentCopy24Regular, null), "aria-label": "Copy skill from ".concat(site.name, " to another site collection"), disabled: !skillContent || !cloneTargetCollections.length, onClick: function () { return skillContent && setCloneSource({ site: site, skillContent: skillContent }); } }),
+                    React.createElement(react_components_1.Button, { appearance: "subtle", size: "small", icon: React.createElement(react_icons_1.Delete24Regular, null), "aria-label": "Delete skill from ".concat(site.name), disabled: !skillFolderUrl, onClick: function () { return skillFolderUrl && setDeleteTarget({ site: site, skillFolderUrl: skillFolderUrl }); } })));
+            }
         }));
         return definitions;
-    }, [compareSiteIds, hasCompareColumn, revisionForSite, siteCollectionForSite, skill, styles, toggleCompareSite]);
+    }, [cloneTargetCollections.length, compareSiteIds, hasCompareColumn, revisionForSite, siteCollectionForSite, skill, styles, toggleCompareSite]);
     if (!skill) {
         return (React.createElement(react_components_1.Card, { className: styles.card },
-            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skill details"), description: React.createElement(react_components_1.Body1, null, "Select a skill to inspect its usage.") })));
+            React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, "Skill details"), description: React.createElement(react_components_1.Body1, null, "Select a skill to inspect its usage."), action: props.onClose ? React.createElement(react_components_1.Button, { appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close skill details", onClick: props.onClose }) : undefined })));
     }
     var compareSiteA = skillSites.find(function (site) { return site.id === compareSiteIds[0]; });
     var compareSiteB = skillSites.find(function (site) { return site.id === compareSiteIds[1]; });
     return (React.createElement(react_components_1.Card, { className: styles.card },
-        React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name) }),
+        React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name), action: props.onClose ? React.createElement(react_components_1.Button, { appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close skill details", onClick: props.onClose }) : undefined }),
         React.createElement(react_components_1.Dialog, { open: previewSiteId !== undefined, onOpenChange: function (_, data) { return setPreviewSiteId(data.open ? previewSiteId : undefined); } },
             React.createElement(react_components_1.DialogSurface, { className: styles.previewDialogSurface },
                 React.createElement(react_components_1.DialogBody, null,
@@ -225,6 +349,51 @@ function SkillDetailsPanel(props) {
                     React.createElement(react_components_1.DialogActions, null,
                         React.createElement(react_components_1.Button, { appearance: "secondary", onClick: function () { return setPreviewSiteId(undefined); } }, "Close"))))),
         compareSiteA && compareSiteB ? (React.createElement(SkillCompareDialog_1.default, { open: isCompareOpen, onOpenChange: setIsCompareOpen, skill: skill, siteA: compareSiteA, siteB: compareSiteB })) : null,
+        React.createElement(react_components_1.Dialog, { open: Boolean(deleteTarget), onOpenChange: function (_, data) { if (!data.open && !isDeleting) {
+                setDeleteTarget(undefined);
+                setDeleteError('');
+            } } },
+            React.createElement(react_components_1.DialogSurface, null,
+                React.createElement(react_components_1.DialogBody, null,
+                    React.createElement(react_components_1.DialogTitle, null, "Delete this skill?"),
+                    React.createElement(react_components_1.DialogContent, null,
+                        isDeleting ? (React.createElement(react_components_1.Spinner, { label: "Deleting the skill folder and its contents\u2026" })) : (React.createElement(React.Fragment, null,
+                            React.createElement(react_components_1.Body1, null,
+                                "This permanently deletes the \u201C",
+                                skill.name,
+                                "\u201D skill folder from ",
+                                React.createElement("strong", null, deleteTarget === null || deleteTarget === void 0 ? void 0 : deleteTarget.site.name),
+                                " - including SKILL.md and everything else inside the folder. This can\u2019t be undone."),
+                            React.createElement(react_components_1.Body1, null, "Only Site Collection Administrators or SharePoint Admins for this site can do this."))),
+                        deleteError ? React.createElement(react_components_1.Body1, { className: styles.deleteError }, deleteError) : null),
+                    React.createElement(react_components_1.DialogActions, null,
+                        React.createElement(react_components_1.Button, { appearance: "secondary", disabled: isDeleting, onClick: function () { setDeleteTarget(undefined); setDeleteError(''); } }, "Cancel"),
+                        React.createElement(react_components_1.Button, { className: styles.deleteConfirmButton, disabled: isDeleting, onClick: function () { void handleConfirmDelete(); } }, isDeleting ? 'Deleting…' : 'Delete skill'))))),
+        React.createElement(react_components_1.Dialog, { open: Boolean(cloneSource), onOpenChange: function (_, data) { if (!data.open && !isCloning) {
+                setCloneSource(undefined);
+                setCloneTargetCollectionId(undefined);
+                setCloneError('');
+            } } },
+            React.createElement(react_components_1.DialogSurface, null,
+                React.createElement(react_components_1.DialogBody, null,
+                    React.createElement(react_components_1.DialogTitle, null, "Copy skill to another site collection"),
+                    React.createElement(react_components_1.DialogContent, null,
+                        isCloning ? (React.createElement(react_components_1.Spinner, { label: cloneStatus || 'Copying skill…' })) : (React.createElement(React.Fragment, null,
+                            React.createElement(react_components_1.Body1, null,
+                                "Copies the \u201C",
+                                skill.name,
+                                "\u201D SKILL.md content from ",
+                                React.createElement("strong", null, cloneSource === null || cloneSource === void 0 ? void 0 : cloneSource.site.name),
+                                " into a new skill folder in the site collection you choose below."),
+                            cloneTargetCollections.length ? (React.createElement("label", { className: styles.cloneField },
+                                React.createElement(react_components_1.Text, { weight: "semibold" }, "Destination site collection"),
+                                React.createElement("select", { className: styles.select, value: cloneTargetCollectionId || '', onChange: function (event) { return setCloneTargetCollectionId(event.target.value || undefined); } },
+                                    React.createElement("option", { value: "" }, "Select a site collection"),
+                                    cloneTargetCollections.map(function (collection) { return (React.createElement("option", { key: collection.id, value: collection.id }, collection.name)); })))) : (React.createElement(react_components_1.Body1, { className: styles.metaLabel }, "This skill already exists in every discovered site collection.")))),
+                        cloneError ? React.createElement(react_components_1.Body1, { className: styles.deleteError }, cloneError) : null),
+                    React.createElement(react_components_1.DialogActions, null,
+                        React.createElement(react_components_1.Button, { appearance: "secondary", disabled: isCloning, onClick: function () { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); } }, "Cancel"),
+                        React.createElement(react_components_1.Button, { appearance: "primary", disabled: isCloning || !cloneTargetCollectionId, onClick: function () { void handleConfirmClone(); } }, isCloning ? 'Copying…' : 'Copy skill'))))),
         React.createElement("div", { className: styles.root },
             React.createElement("div", { className: styles.section },
                 React.createElement("div", { className: styles.sitesSectionHeader },
@@ -246,17 +415,17 @@ function SkillDetailsPanel(props) {
                     React.createElement(react_components_1.DataGridHeader, null,
                         React.createElement(react_components_1.DataGridRow, null, function (_a) {
                             var renderHeaderCell = _a.renderHeaderCell, columnId = _a.columnId;
-                            return (React.createElement(react_components_1.DataGridHeaderCell, { style: columnId === 'compare'
+                            return (React.createElement(react_components_1.DataGridHeaderCell, { style: columnId === 'compare' || columnId === 'actions'
                                     ? { width: columnWidths[columnId], padding: 0 }
-                                    : { width: columnWidths[columnId] } }, renderHeaderCell()));
+                                    : { width: columnWidths[columnId], paddingLeft: react_components_1.tokens.spacingHorizontalM, paddingRight: react_components_1.tokens.spacingHorizontalM } }, renderHeaderCell()));
                         })),
                     React.createElement(react_components_1.DataGridBody, null, function (_a) {
                         var item = _a.item, rowId = _a.rowId;
                         return (React.createElement(react_components_1.DataGridRow, { key: rowId }, function (_a) {
                             var renderCell = _a.renderCell, columnId = _a.columnId;
-                            return (React.createElement(react_components_1.DataGridCell, { style: columnId === 'compare'
+                            return (React.createElement(react_components_1.DataGridCell, { style: columnId === 'compare' || columnId === 'actions'
                                     ? { width: columnWidths[columnId], padding: 0, justifyContent: 'center' }
-                                    : { width: columnWidths[columnId] } }, renderCell(item)));
+                                    : { width: columnWidths[columnId], paddingLeft: react_components_1.tokens.spacingHorizontalM, paddingRight: react_components_1.tokens.spacingHorizontalM } }, renderCell(item)));
                         }));
                     }))) : (React.createElement(react_components_1.Body1, { className: styles.sitesEmpty }, "No sites match your search."))),
                 sitesPageCount > 1 ? (React.createElement("div", { className: styles.sitesPagination },
