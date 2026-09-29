@@ -4,15 +4,16 @@ exports.SiteService = void 0;
 var tslib_1 = require("tslib");
 var GraphSiteService_1 = require("./GraphSiteService");
 var SiteService = /** @class */ (function () {
-    function SiteService(msGraphClientFactory) {
+    function SiteService(msGraphClientFactory, spHttpClient) {
         this.msGraphClientFactory = msGraphClientFactory;
+        this.spHttpClient = spHttpClient;
     }
     SiteService.prototype.getSites = function () {
         return tslib_1.__awaiter(this, arguments, void 0, function (options) {
             var graphSiteService;
             if (options === void 0) { options = {}; }
             return tslib_1.__generator(this, function (_a) {
-                graphSiteService = new GraphSiteService_1.GraphSiteService(this.msGraphClientFactory);
+                graphSiteService = new GraphSiteService_1.GraphSiteService(this.msGraphClientFactory, this.spHttpClient);
                 return [2 /*return*/, graphSiteService.getAllSites(options)];
             });
         });

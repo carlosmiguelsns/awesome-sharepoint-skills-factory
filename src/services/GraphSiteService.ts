@@ -1,4 +1,4 @@
-import { type MSGraphClientFactory, type MSGraphClientV3 } from '@microsoft/sp-http';
+import { SPHttpClient, type MSGraphClientFactory, type MSGraphClientV3, type SPHttpClientResponse } from '@microsoft/sp-http';
 
 import type { SharePointSite } from '../models';
 import { buildIdFromUrl, getSiteCollectionNameFromUrl, getSiteCollectionUrl } from '../utils/siteHelpers';
@@ -76,12 +76,37 @@ function normalizeSite(site: IGraphSiteResponse): SharePointSite | undefined {
     siteCollectionName,
     owner: 'Tenant data',
     description: 'Discovered from Microsoft Graph.',
-    template: 'SharePoint'
+    template: ''
   };
 }
 
 export class GraphSiteService {
-  constructor(private readonly msGraphClientFactory?: MSGraphClientFactory) {}
+  constructor(
+    private readonly msGraphClientFactory?: MSGraphClientFactory,
+    private readonly spHttpClient?: SPHttpClient
+  ) {}
+
+  private async getWebTemplateAsync(webUrl: string): Promise<string> {
+    if (!this.spHttpClient) {
+      return '';
+    }
+
+    try {
+      const response: SPHttpClientResponse = await this.spHttpClient.get(
+        `${webUrl}/_api/web?$select=WebTemplate`,
+        SPHttpClient.configurations.v1
+      );
+
+      if (!response.ok) {
+        return '';
+      }
+
+      const data: { WebTemplate?: string } = (await response.json()) as { WebTemplate?: string };
+      return data.WebTemplate || '';
+    } catch {
+      return '';
+    }
+  }
 
   public async getAllSites(options: ISiteDiscoveryOptions = {}): Promise<SharePointSite[]> {
     if (!this.msGraphClientFactory) {
@@ -100,13 +125,16 @@ export class GraphSiteService {
       const pageSites: SharePointSite[] = (response.value || [])
         .filter((site: IGraphSiteResponse) => isVisibleSite(site))
         .map((site: IGraphSiteResponse) => normalizeSite(site))
-        .filter((site: SharePointSite | undefined): site is SharePointSite => Boolean(site));
+        .filter((site: SharePointSite | undefined): site is SharePointSite => Boolean(site))
+        .filter((site: SharePointSite) => !seenIds.has(site.id));
+
+      await Promise.all(
+        pageSites.map(async (site: SharePointSite) => {
+          site.template = await this.getWebTemplateAsync(site.url);
+        })
+      );
 
       for (const site of pageSites) {
-        if (seenIds.has(site.id)) {
-          continue;
-        }
-
         seenIds.add(site.id);
         discoveredSites.push(site);
       }

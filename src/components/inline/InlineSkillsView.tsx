@@ -43,6 +43,7 @@ export interface IInlineSkillsViewProps {
   onStartCreateSkill: () => void;
   onCancelCreateSkill: () => void;
   onCreateSkill: (request: ICreateSkillRequest) => Promise<ICreateSkillResult>;
+  onActivateAgentAssetsFeature: (siteUrl: string) => Promise<void>;
   onSkillCreated: () => void;
 }
 
@@ -83,6 +84,7 @@ export default function InlineSkillsView(props: IInlineSkillsViewProps): React.R
         <CreateSkillForm
           sites={props.sites}
           onCreateSkill={props.onCreateSkill}
+          onActivateAgentAssetsFeature={props.onActivateAgentAssetsFeature}
           onCreated={props.onSkillCreated}
           onCancel={props.onCancelCreateSkill}
         />

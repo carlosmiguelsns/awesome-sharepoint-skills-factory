@@ -6,7 +6,10 @@ var React = tslib_1.__importStar(require("react"));
 var react_components_1 = require("@fluentui/react-components");
 var react_editor_1 = require("@toast-ui/react-editor");
 require("@toast-ui/editor/dist/toastui-editor.css");
+var TenantSharePointDataService_1 = require("../services/TenantSharePointDataService");
+var siteHelpers_1 = require("../utils/siteHelpers");
 var textHelpers_1 = require("../utils/textHelpers");
+var ActivateAgentAssetsDialog_1 = tslib_1.__importDefault(require("./ActivateAgentAssetsDialog"));
 var useStyles = (0, react_components_1.makeStyles)({
     root: {
         position: 'relative',
@@ -17,7 +20,10 @@ var useStyles = (0, react_components_1.makeStyles)({
     overlay: {
         position: 'absolute',
         inset: 0,
-        zIndex: 1,
+        // Toast UI Editor's own WYSIWYG container/content elements use z-index up to 40
+        // internally (toolbar dropdowns, tooltips, popups), so this needs to clear that
+        // to actually sit on top while submitting.
+        zIndex: 100,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -95,17 +101,21 @@ function CreateSkillForm(props) {
     var _d = React.useState(false), submitting = _d[0], setSubmitting = _d[1];
     var _e = React.useState(''), status = _e[0], setStatus = _e[1];
     var _f = React.useState(''), error = _f[0], setError = _f[1];
+    var _g = React.useState(undefined), agentAssetsPromptSiteUrl = _g[0], setAgentAssetsPromptSiteUrl = _g[1];
+    var _h = React.useState(false), isActivatingFeature = _h[0], setIsActivatingFeature = _h[1];
+    var _j = React.useState(''), activateError = _j[0], setActivateError = _j[1];
+    var creatableSites = React.useMemo(function () { return props.sites.filter(function (site) { return (0, siteHelpers_1.isTeamOrCommunicationSiteTemplate)(site.template); }); }, [props.sites]);
     React.useEffect(function () {
-        if (!siteId && props.sites.length) {
-            setSiteId(props.sites[0].id);
+        if (!siteId && creatableSites.length) {
+            setSiteId(creatableSites[0].id);
         }
-    }, [props.sites, siteId]);
+    }, [creatableSites, siteId]);
     React.useEffect(function () {
         var _a;
         (_a = props.onSubmittingChange) === null || _a === void 0 ? void 0 : _a.call(props, submitting);
     }, [submitting]); // eslint-disable-line react-hooks/exhaustive-deps
     var normalizedName = React.useMemo(function () { return (0, textHelpers_1.normalizeSkillFolderName)(name); }, [name]);
-    var selectedSite = React.useMemo(function () { return props.sites.find(function (site) { return site.id === siteId; }); }, [props.sites, siteId]);
+    var selectedSite = React.useMemo(function () { return creatableSites.find(function (site) { return site.id === siteId; }); }, [creatableSites, siteId]);
     var handleSubmit = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
         var trimmedName, site, normalized, result, submitError_1;
         var _a, _b;
@@ -113,7 +123,7 @@ function CreateSkillForm(props) {
             switch (_c.label) {
                 case 0:
                     trimmedName = name.trim();
-                    site = props.sites.find(function (item) { return item.id === siteId; });
+                    site = creatableSites.find(function (item) { return item.id === siteId; });
                     setError('');
                     setStatus('');
                     if (!trimmedName) {
@@ -154,7 +164,13 @@ function CreateSkillForm(props) {
                     return [3 /*break*/, 5];
                 case 3:
                     submitError_1 = _c.sent();
-                    setError(submitError_1 instanceof Error ? submitError_1.message : 'Failed to create the skill.');
+                    if ((0, TenantSharePointDataService_1.isAgentAssetsLibraryNotFoundError)(submitError_1)) {
+                        setAgentAssetsPromptSiteUrl(submitError_1.siteUrl);
+                        setStatus('');
+                    }
+                    else {
+                        setError(submitError_1 instanceof Error ? submitError_1.message : 'Failed to create the skill.');
+                    }
                     return [3 /*break*/, 5];
                 case 4:
                     setSubmitting(false);
@@ -162,7 +178,43 @@ function CreateSkillForm(props) {
                 case 5: return [2 /*return*/];
             }
         });
-    }); }, [content, name, props, siteId]);
+    }); }, [content, creatableSites, name, props, siteId]);
+    var handleCancelActivateFeature = React.useCallback(function () {
+        setAgentAssetsPromptSiteUrl(undefined);
+        setActivateError('');
+    }, []);
+    var handleConfirmActivateFeature = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+        var activationError_1;
+        return tslib_1.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (!agentAssetsPromptSiteUrl) {
+                        return [2 /*return*/];
+                    }
+                    setIsActivatingFeature(true);
+                    setActivateError('');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 4, 5, 6]);
+                    return [4 /*yield*/, props.onActivateAgentAssetsFeature(agentAssetsPromptSiteUrl)];
+                case 2:
+                    _a.sent();
+                    setAgentAssetsPromptSiteUrl(undefined);
+                    return [4 /*yield*/, handleSubmit()];
+                case 3:
+                    _a.sent();
+                    return [3 /*break*/, 6];
+                case 4:
+                    activationError_1 = _a.sent();
+                    setActivateError(activationError_1 instanceof Error ? activationError_1.message : 'Failed to activate the Agent Assets feature.');
+                    return [3 /*break*/, 6];
+                case 5:
+                    setIsActivatingFeature(false);
+                    return [7 /*endfinally*/];
+                case 6: return [2 /*return*/];
+            }
+        });
+    }); }, [agentAssetsPromptSiteUrl, handleSubmit, props]);
     return (React.createElement("div", { className: styles.root },
         submitting ? (React.createElement("div", { className: styles.overlay },
             React.createElement(react_components_1.Spinner, { label: status || 'Creating skill…' }))) : null,
@@ -172,7 +224,7 @@ function CreateSkillForm(props) {
             React.createElement(react_components_1.Field, { className: styles.field, label: "Site", required: true },
                 React.createElement("select", { className: styles.select, value: siteId, disabled: submitting, onChange: function (event) { return setSiteId(event.target.value); } },
                     React.createElement("option", { value: "" }, "Select a site"),
-                    props.sites.slice().sort(compareSiteName).map(function (site) { return (React.createElement("option", { key: site.id, value: site.id }, site.name)); }))),
+                    creatableSites.slice().sort(compareSiteName).map(function (site) { return (React.createElement("option", { key: site.id, value: site.id }, site.name)); }))),
             React.createElement(react_components_1.Field, { className: styles.field, label: "Skill Name", required: true },
                 React.createElement(react_components_1.Input, { value: name, disabled: submitting, onChange: function (_, data) { return setName(data.value); }, placeholder: 'Example: "Build HTML Dashboard!"' }),
                 React.createElement(react_components_1.Caption1, null,
@@ -190,6 +242,7 @@ function CreateSkillForm(props) {
                     selectedSite ? "".concat(selectedSite.name, " / Agent Assets / skills / ").concat(normalizedName || 'skill-name', " / SKILL.md") : 'Select a site to preview the path.')),
             React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.actions, styles.fullWidth) },
                 props.onCancel ? (React.createElement(react_components_1.Button, { appearance: "secondary", disabled: submitting, onClick: props.onCancel }, "Cancel")) : null,
-                React.createElement(react_components_1.Button, { appearance: "primary", onClick: function () { void handleSubmit(); }, disabled: submitting || !name.trim() || !siteId }, submitting ? 'Creating…' : 'Create Skill')))));
+                React.createElement(react_components_1.Button, { appearance: "primary", onClick: function () { void handleSubmit(); }, disabled: submitting || !name.trim() || !siteId }, submitting ? 'Creating…' : 'Create Skill'))),
+        React.createElement(ActivateAgentAssetsDialog_1.default, { open: Boolean(agentAssetsPromptSiteUrl), siteUrl: agentAssetsPromptSiteUrl, isActivating: isActivatingFeature, error: activateError, onConfirm: function () { void handleConfirmActivateFeature(); }, onCancel: handleCancelActivateFeature })));
 }
 //# sourceMappingURL=CreateSkillForm.js.map

@@ -8,6 +8,9 @@ var react_icons_1 = require("@fluentui/react-icons");
 var react_editor_1 = require("@toast-ui/react-editor");
 require("@toast-ui/editor/dist/toastui-editor.css");
 var dateHelpers_1 = require("../../utils/dateHelpers");
+var siteHelpers_1 = require("../../utils/siteHelpers");
+var TenantSharePointDataService_1 = require("../../services/TenantSharePointDataService");
+var ActivateAgentAssetsDialog_1 = tslib_1.__importDefault(require("../ActivateAgentAssetsDialog"));
 var SkillCompareDialog_1 = tslib_1.__importDefault(require("./SkillCompareDialog"));
 var SITES_PAGE_SIZE = 8;
 var useStyles = (0, react_components_1.makeStyles)({
@@ -102,8 +105,20 @@ var useStyles = (0, react_components_1.makeStyles)({
         color: react_components_1.tokens.colorPaletteRedForeground1
     },
     deleteConfirmButton: {
-        backgroundColor: react_components_1.tokens.colorPaletteRedBackground3,
-        color: react_components_1.tokens.colorPaletteRedForeground2
+        backgroundColor: react_components_1.tokens.colorStatusDangerBackground3,
+        color: react_components_1.tokens.colorNeutralForegroundOnBrand,
+        ':hover': {
+            backgroundColor: react_components_1.tokens.colorStatusDangerBackground3Hover,
+            color: react_components_1.tokens.colorNeutralForegroundOnBrand
+        },
+        ':hover:active': {
+            backgroundColor: react_components_1.tokens.colorStatusDangerBackground3Pressed,
+            color: react_components_1.tokens.colorNeutralForegroundOnBrand
+        }
+    },
+    dialogSpinner: {
+        marginTop: react_components_1.tokens.spacingVerticalM,
+        marginBottom: react_components_1.tokens.spacingVerticalM
     },
     cloneField: {
         display: 'flex',
@@ -154,6 +169,9 @@ function SkillDetailsPanel(props) {
     var _p = React.useState(false), isCloning = _p[0], setIsCloning = _p[1];
     var _q = React.useState(''), cloneStatus = _q[0], setCloneStatus = _q[1];
     var _r = React.useState(''), cloneError = _r[0], setCloneError = _r[1];
+    var _s = React.useState(undefined), agentAssetsPromptSiteUrl = _s[0], setAgentAssetsPromptSiteUrl = _s[1];
+    var _t = React.useState(false), isActivatingFeature = _t[0], setIsActivatingFeature = _t[1];
+    var _u = React.useState(''), activateError = _u[0], setActivateError = _u[1];
     React.useEffect(function () {
         setPreviewSiteId(undefined);
         setCompareSiteIds([]);
@@ -165,6 +183,8 @@ function SkillDetailsPanel(props) {
         setCloneSource(undefined);
         setCloneTargetCollectionId(undefined);
         setCloneError('');
+        setAgentAssetsPromptSiteUrl(undefined);
+        setActivateError('');
     }, [skill === null || skill === void 0 ? void 0 : skill.id]);
     var handleConfirmDelete = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
         var error_1;
@@ -211,7 +231,14 @@ function SkillDetailsPanel(props) {
         var rootSite = candidates.find(function (site) { return site.url.replace(/\/$/, '') === ((collection === null || collection === void 0 ? void 0 : collection.url) || '').replace(/\/$/, ''); });
         return rootSite || candidates[0];
     }, [props.sites, props.siteCollections]);
-    var cloneTargetCollections = React.useMemo(function () { return (skill ? props.siteCollections.filter(function (collection) { return skill.siteCollectionIds.indexOf(collection.id) === -1; }) : []); }, [props.siteCollections, skill]);
+    var cloneTargetCollections = React.useMemo(function () {
+        return skill
+            ? props.siteCollections.filter(function (collection) {
+                return skill.siteCollectionIds.indexOf(collection.id) === -1 &&
+                    props.sites.some(function (site) { return site.siteCollectionId === collection.id && (0, siteHelpers_1.isTeamOrCommunicationSiteTemplate)(site.template); });
+            })
+            : [];
+    }, [props.siteCollections, props.sites, skill]);
     var handleConfirmClone = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
         var targetSite, error_2;
         return tslib_1.__generator(this, function (_a) {
@@ -244,7 +271,13 @@ function SkillDetailsPanel(props) {
                     return [3 /*break*/, 5];
                 case 3:
                     error_2 = _a.sent();
-                    setCloneError(error_2 instanceof Error ? error_2.message : 'Failed to copy the skill.');
+                    if ((0, TenantSharePointDataService_1.isAgentAssetsLibraryNotFoundError)(error_2)) {
+                        setAgentAssetsPromptSiteUrl(error_2.siteUrl);
+                        setCloneStatus('');
+                    }
+                    else {
+                        setCloneError(error_2 instanceof Error ? error_2.message : 'Failed to copy the skill.');
+                    }
                     return [3 /*break*/, 5];
                 case 4:
                     setIsCloning(false);
@@ -253,6 +286,42 @@ function SkillDetailsPanel(props) {
             }
         });
     }); }, [cloneSource, cloneTargetCollectionId, props, resolveSiteForCollection, skill]);
+    var handleCancelActivateFeature = React.useCallback(function () {
+        setAgentAssetsPromptSiteUrl(undefined);
+        setActivateError('');
+    }, []);
+    var handleConfirmActivateFeature = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+        var activationError_1;
+        return tslib_1.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    if (!agentAssetsPromptSiteUrl) {
+                        return [2 /*return*/];
+                    }
+                    setIsActivatingFeature(true);
+                    setActivateError('');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 4, 5, 6]);
+                    return [4 /*yield*/, props.onActivateAgentAssetsFeature(agentAssetsPromptSiteUrl)];
+                case 2:
+                    _a.sent();
+                    setAgentAssetsPromptSiteUrl(undefined);
+                    return [4 /*yield*/, handleConfirmClone()];
+                case 3:
+                    _a.sent();
+                    return [3 /*break*/, 6];
+                case 4:
+                    activationError_1 = _a.sent();
+                    setActivateError(activationError_1 instanceof Error ? activationError_1.message : 'Failed to activate the Agent Assets feature.');
+                    return [3 /*break*/, 6];
+                case 5:
+                    setIsActivatingFeature(false);
+                    return [7 /*endfinally*/];
+                case 6: return [2 /*return*/];
+            }
+        });
+    }); }, [agentAssetsPromptSiteUrl, handleConfirmClone, props]);
     var skillSites = React.useMemo(function () { return (skill ? props.sites.filter(function (site) { return skill.siteIds.indexOf(site.id) !== -1; }) : []); }, [props.sites, skill]);
     var filteredSkillSites = React.useMemo(function () {
         var needle = siteSearchText.trim().toLowerCase();
@@ -357,7 +426,7 @@ function SkillDetailsPanel(props) {
                 React.createElement(react_components_1.DialogBody, null,
                     React.createElement(react_components_1.DialogTitle, null, "Delete this skill?"),
                     React.createElement(react_components_1.DialogContent, null,
-                        isDeleting ? (React.createElement(react_components_1.Spinner, { label: "Deleting the skill folder and its contents\u2026" })) : (React.createElement(React.Fragment, null,
+                        isDeleting ? (React.createElement(react_components_1.Spinner, { className: styles.dialogSpinner, label: "Deleting the skill folder and its contents\u2026" })) : (React.createElement(React.Fragment, null,
                             React.createElement(react_components_1.Body1, null,
                                 "This permanently deletes the \u201C",
                                 skill.name,
@@ -368,7 +437,7 @@ function SkillDetailsPanel(props) {
                         deleteError ? React.createElement(react_components_1.Body1, { className: styles.deleteError }, deleteError) : null),
                     React.createElement(react_components_1.DialogActions, null,
                         React.createElement(react_components_1.Button, { appearance: "secondary", disabled: isDeleting, onClick: function () { setDeleteTarget(undefined); setDeleteError(''); } }, "Cancel"),
-                        React.createElement(react_components_1.Button, { className: styles.deleteConfirmButton, disabled: isDeleting, onClick: function () { void handleConfirmDelete(); } }, isDeleting ? 'Deleting…' : 'Delete skill'))))),
+                        React.createElement(react_components_1.Button, { appearance: "primary", className: styles.deleteConfirmButton, disabled: isDeleting, onClick: function () { void handleConfirmDelete(); } }, isDeleting ? 'Deleting…' : 'Delete skill'))))),
         React.createElement(react_components_1.Dialog, { open: Boolean(cloneSource), onOpenChange: function (_, data) { if (!data.open && !isCloning) {
                 setCloneSource(undefined);
                 setCloneTargetCollectionId(undefined);
@@ -378,7 +447,7 @@ function SkillDetailsPanel(props) {
                 React.createElement(react_components_1.DialogBody, null,
                     React.createElement(react_components_1.DialogTitle, null, "Copy skill to another site collection"),
                     React.createElement(react_components_1.DialogContent, null,
-                        isCloning ? (React.createElement(react_components_1.Spinner, { label: cloneStatus || 'Copying skill…' })) : (React.createElement(React.Fragment, null,
+                        isCloning ? (React.createElement(react_components_1.Spinner, { className: styles.dialogSpinner, label: cloneStatus || 'Copying skill…' })) : (React.createElement(React.Fragment, null,
                             React.createElement(react_components_1.Body1, null,
                                 "Copies the \u201C",
                                 skill.name,
@@ -394,6 +463,7 @@ function SkillDetailsPanel(props) {
                     React.createElement(react_components_1.DialogActions, null,
                         React.createElement(react_components_1.Button, { appearance: "secondary", disabled: isCloning, onClick: function () { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); } }, "Cancel"),
                         React.createElement(react_components_1.Button, { appearance: "primary", disabled: isCloning || !cloneTargetCollectionId, onClick: function () { void handleConfirmClone(); } }, isCloning ? 'Copying…' : 'Copy skill'))))),
+        React.createElement(ActivateAgentAssetsDialog_1.default, { open: Boolean(agentAssetsPromptSiteUrl), siteUrl: agentAssetsPromptSiteUrl, isActivating: isActivatingFeature, error: activateError, onConfirm: function () { void handleConfirmActivateFeature(); }, onCancel: handleCancelActivateFeature }),
         React.createElement("div", { className: styles.root },
             React.createElement("div", { className: styles.section },
                 React.createElement("div", { className: styles.sitesSectionHeader },
@@ -415,7 +485,7 @@ function SkillDetailsPanel(props) {
                     React.createElement(react_components_1.DataGridHeader, null,
                         React.createElement(react_components_1.DataGridRow, null, function (_a) {
                             var renderHeaderCell = _a.renderHeaderCell, columnId = _a.columnId;
-                            return (React.createElement(react_components_1.DataGridHeaderCell, { style: columnId === 'compare' || columnId === 'actions'
+                            return (React.createElement(react_components_1.DataGridHeaderCell, { "aria-label": columnId === 'compare' ? 'Compare' : columnId === 'actions' ? 'Actions' : undefined, style: columnId === 'compare' || columnId === 'actions'
                                     ? { width: columnWidths[columnId], padding: 0 }
                                     : { width: columnWidths[columnId], paddingLeft: react_components_1.tokens.spacingHorizontalM, paddingRight: react_components_1.tokens.spacingHorizontalM } }, renderHeaderCell()));
                         })),

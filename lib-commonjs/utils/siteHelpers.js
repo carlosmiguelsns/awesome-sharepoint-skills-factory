@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildIdFromUrl = buildIdFromUrl;
 exports.getSiteCollectionUrl = getSiteCollectionUrl;
 exports.getSiteCollectionNameFromUrl = getSiteCollectionNameFromUrl;
+exports.isTeamOrCommunicationSiteTemplate = isTeamOrCommunicationSiteTemplate;
 function buildIdFromUrl(url) {
     return url.replace(/^https?:\/\//i, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
 }
@@ -21,5 +22,10 @@ function getSiteCollectionNameFromUrl(siteUrl) {
         return parsed.host;
     }
     return decodeURIComponent(pathSegments[1]);
+}
+var CREATABLE_SITE_WEB_TEMPLATES = new Set(['GROUP', 'STS', 'SITEPAGEPUBLISHING']);
+function isTeamOrCommunicationSiteTemplate(webTemplate) {
+    var normalized = (webTemplate || '').split('#')[0].trim().toUpperCase();
+    return CREATABLE_SITE_WEB_TEMPLATES.has(normalized);
 }
 //# sourceMappingURL=siteHelpers.js.map

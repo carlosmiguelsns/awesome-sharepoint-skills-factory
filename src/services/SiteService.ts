@@ -1,13 +1,16 @@
-import { type MSGraphClientFactory } from '@microsoft/sp-http';
+import { type MSGraphClientFactory, type SPHttpClient } from '@microsoft/sp-http';
 
 import type { SharePointSite, SiteCollection } from '../models';
 import { GraphSiteService, type ISiteDiscoveryOptions } from './GraphSiteService';
 
 export class SiteService {
-  constructor(private readonly msGraphClientFactory?: MSGraphClientFactory) {}
+  constructor(
+    private readonly msGraphClientFactory?: MSGraphClientFactory,
+    private readonly spHttpClient?: SPHttpClient
+  ) {}
 
   public async getSites(options: ISiteDiscoveryOptions = {}): Promise<SharePointSite[]> {
-    const graphSiteService: GraphSiteService = new GraphSiteService(this.msGraphClientFactory);
+    const graphSiteService: GraphSiteService = new GraphSiteService(this.msGraphClientFactory, this.spHttpClient);
     return graphSiteService.getAllSites(options);
   }
 

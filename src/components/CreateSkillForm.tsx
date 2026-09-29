@@ -5,8 +5,10 @@ import { Editor } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
 import type { SharePointSite } from '../models';
-import type { ICreateSkillRequest, ICreateSkillResult } from '../services/TenantSharePointDataService';
+import { isAgentAssetsLibraryNotFoundError, type ICreateSkillRequest, type ICreateSkillResult } from '../services/TenantSharePointDataService';
+import { isTeamOrCommunicationSiteTemplate } from '../utils/siteHelpers';
 import { normalizeSkillFolderName } from '../utils/textHelpers';
+import ActivateAgentAssetsDialog from './ActivateAgentAssetsDialog';
 
 const useStyles = makeStyles({
   root: {
@@ -18,7 +20,10 @@ const useStyles = makeStyles({
   overlay: {
     position: 'absolute',
     inset: 0,
-    zIndex: 1,
+    // Toast UI Editor's own WYSIWYG container/content elements use z-index up to 40
+    // internally (toolbar dropdowns, tooltips, popups), so this needs to clear that
+    // to actually sit on top while submitting.
+    zIndex: 100,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -92,6 +97,7 @@ function compareSiteName(left: SharePointSite, right: SharePointSite): number {
 export interface ICreateSkillFormProps {
   sites: SharePointSite[];
   onCreateSkill: (request: ICreateSkillRequest) => Promise<ICreateSkillResult>;
+  onActivateAgentAssetsFeature: (siteUrl: string) => Promise<void>;
   onCreated?: (result: ICreateSkillResult) => void;
   onCancel?: () => void;
   onSubmittingChange?: (submitting: boolean) => void;
@@ -107,12 +113,20 @@ export default function CreateSkillForm(props: ICreateSkillFormProps): React.Rea
   const [submitting, setSubmitting] = React.useState<boolean>(false);
   const [status, setStatus] = React.useState<string>('');
   const [error, setError] = React.useState<string>('');
+  const [agentAssetsPromptSiteUrl, setAgentAssetsPromptSiteUrl] = React.useState<string | undefined>(undefined);
+  const [isActivatingFeature, setIsActivatingFeature] = React.useState<boolean>(false);
+  const [activateError, setActivateError] = React.useState<string>('');
+
+  const creatableSites: SharePointSite[] = React.useMemo(
+    () => props.sites.filter((site: SharePointSite) => isTeamOrCommunicationSiteTemplate(site.template)),
+    [props.sites]
+  );
 
   React.useEffect(() => {
-    if (!siteId && props.sites.length) {
-      setSiteId(props.sites[0].id);
+    if (!siteId && creatableSites.length) {
+      setSiteId(creatableSites[0].id);
     }
-  }, [props.sites, siteId]);
+  }, [creatableSites, siteId]);
 
   React.useEffect(() => {
     props.onSubmittingChange?.(submitting);
@@ -120,13 +134,13 @@ export default function CreateSkillForm(props: ICreateSkillFormProps): React.Rea
 
   const normalizedName: string = React.useMemo(() => normalizeSkillFolderName(name), [name]);
   const selectedSite: SharePointSite | undefined = React.useMemo(
-    () => props.sites.find((site: SharePointSite) => site.id === siteId),
-    [props.sites, siteId]
+    () => creatableSites.find((site: SharePointSite) => site.id === siteId),
+    [creatableSites, siteId]
   );
 
   const handleSubmit = React.useCallback(async (): Promise<void> => {
     const trimmedName: string = name.trim();
-    const site: SharePointSite | undefined = props.sites.find((item: SharePointSite) => item.id === siteId);
+    const site: SharePointSite | undefined = creatableSites.find((item: SharePointSite) => item.id === siteId);
 
     setError('');
     setStatus('');
@@ -167,11 +181,39 @@ export default function CreateSkillForm(props: ICreateSkillFormProps): React.Rea
       skillContentEditorRef.current?.getInstance().setMarkdown('');
       props.onCreated?.(result);
     } catch (submitError: unknown) {
-      setError(submitError instanceof Error ? submitError.message : 'Failed to create the skill.');
+      if (isAgentAssetsLibraryNotFoundError(submitError)) {
+        setAgentAssetsPromptSiteUrl(submitError.siteUrl);
+        setStatus('');
+      } else {
+        setError(submitError instanceof Error ? submitError.message : 'Failed to create the skill.');
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [content, name, props, siteId]);
+  }, [content, creatableSites, name, props, siteId]);
+
+  const handleCancelActivateFeature = React.useCallback((): void => {
+    setAgentAssetsPromptSiteUrl(undefined);
+    setActivateError('');
+  }, []);
+
+  const handleConfirmActivateFeature = React.useCallback(async (): Promise<void> => {
+    if (!agentAssetsPromptSiteUrl) {
+      return;
+    }
+
+    setIsActivatingFeature(true);
+    setActivateError('');
+    try {
+      await props.onActivateAgentAssetsFeature(agentAssetsPromptSiteUrl);
+      setAgentAssetsPromptSiteUrl(undefined);
+      await handleSubmit();
+    } catch (activationError: unknown) {
+      setActivateError(activationError instanceof Error ? activationError.message : 'Failed to activate the Agent Assets feature.');
+    } finally {
+      setIsActivatingFeature(false);
+    }
+  }, [agentAssetsPromptSiteUrl, handleSubmit, props]);
 
   return (
     <div className={styles.root}>
@@ -187,7 +229,7 @@ export default function CreateSkillForm(props: ICreateSkillFormProps): React.Rea
         <Field className={styles.field} label="Site" required>
           <select className={styles.select} value={siteId} disabled={submitting} onChange={(event) => setSiteId(event.target.value)}>
             <option value="">Select a site</option>
-            {props.sites.slice().sort(compareSiteName).map((site: SharePointSite) => (
+            {creatableSites.slice().sort(compareSiteName).map((site: SharePointSite) => (
               <option key={site.id} value={site.id}>
                 {site.name}
               </option>
@@ -230,6 +272,15 @@ export default function CreateSkillForm(props: ICreateSkillFormProps): React.Rea
           </Button>
         </div>
       </div>
+
+      <ActivateAgentAssetsDialog
+        open={Boolean(agentAssetsPromptSiteUrl)}
+        siteUrl={agentAssetsPromptSiteUrl}
+        isActivating={isActivatingFeature}
+        error={activateError}
+        onConfirm={() => { void handleConfirmActivateFeature(); }}
+        onCancel={handleCancelActivateFeature}
+      />
     </div>
   );
 }

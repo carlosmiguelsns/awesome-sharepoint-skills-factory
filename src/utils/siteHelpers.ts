@@ -23,3 +23,10 @@ export function getSiteCollectionNameFromUrl(siteUrl: string): string {
 
   return decodeURIComponent(pathSegments[1]);
 }
+
+const CREATABLE_SITE_WEB_TEMPLATES: ReadonlySet<string> = new Set(['GROUP', 'STS', 'SITEPAGEPUBLISHING']);
+
+export function isTeamOrCommunicationSiteTemplate(webTemplate: string | undefined): boolean {
+  const normalized: string = (webTemplate || '').split('#')[0].trim().toUpperCase();
+  return CREATABLE_SITE_WEB_TEMPLATES.has(normalized);
+}

@@ -130,11 +130,19 @@ var useStyles = (0, react_components_1.makeStyles)({
         inset: 0,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'center'
+    },
+    distributionTrackLabelText: {
+        // The track's fill can be either colorBrandBackground (saturated) or colorNeutralBackground3
+        // (near-white) depending on the percentage, so the label needs its own solid backdrop rather
+        // than a single fixed foreground color — colorNeutralForeground1 alone drops to ~2.9:1 against
+        // colorBrandBackground in light theme.
+        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
+        borderRadius: react_components_1.tokens.borderRadiusSmall,
+        padding: "0 ".concat(react_components_1.tokens.spacingHorizontalXS),
         fontSize: react_components_1.tokens.fontSizeBase200,
         fontWeight: react_components_1.tokens.fontWeightSemibold,
-        color: react_components_1.tokens.colorNeutralForeground1,
-        textShadow: "0 0 3px ".concat(react_components_1.tokens.colorNeutralBackground1, ", 0 0 3px ").concat(react_components_1.tokens.colorNeutralBackground1)
+        color: react_components_1.tokens.colorNeutralForeground1
     },
     distributionMeta: { display: 'flex', justifyContent: 'flex-end', gap: react_components_1.tokens.spacingHorizontalXS, whiteSpace: 'nowrap' },
     usageViewport: { paddingRight: react_components_1.tokens.spacingHorizontalXXS, overflowX: 'auto', overflowY: 'hidden' },
@@ -323,11 +331,17 @@ function SkillsFactoryDashboard(props) {
                     React.createElement("div", { className: styles.usageFilterChips },
                         mySkillsOnly ? (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Owner: You",
-                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear owner filter", onClick: function () { return setMySkillsOnly(false); } }))) : null,
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear owner filter", role: "button", tabIndex: 0, onClick: function () { return setMySkillsOnly(false); }, onKeyDown: function (event) { if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    setMySkillsOnly(false);
+                                } } }))) : null,
                         props.searchText.trim() ? (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Search: ",
                             props.searchText.trim(),
-                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", onClick: function () { return props.onSearchTextChange(''); } }))) : null),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", role: "button", tabIndex: 0, onClick: function () { return props.onSearchTextChange(''); }, onKeyDown: function (event) { if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    props.onSearchTextChange('');
+                                } } }))) : null),
                     React.createElement("div", { className: styles.toolbarActions },
                         React.createElement(react_components_1.Button, { appearance: "secondary", icon: skillsSearchOpen ? React.createElement(react_icons_1.ChevronRight24Regular, null) : React.createElement(react_icons_1.ChevronDown24Regular, null), onClick: function () { return setSkillsSearchOpen(function (current) { return !current; }); } }, skillsSearchOpen ? 'Close search' : 'Open search'))),
                 React.createElement(react_components_1.Card, { className: (0, react_components_1.mergeClasses)(styles.searchPanel, !skillsSearchOpen && styles.slidePanelHidden) },
@@ -346,26 +360,38 @@ function SkillsFactoryDashboard(props) {
                     React.createElement(SkillsTable_1.default, { skills: filteredAllSkills, selectedSkillId: (_a = props.selectedSkill) === null || _a === void 0 ? void 0 : _a.id, onSelectSkill: props.onSelectSkill, currentUserName: props.currentUserName })),
                 React.createElement("div", { className: (0, react_components_1.mergeClasses)(styles.skillBlade, !props.selectedSkill && styles.slidePanelHidden) },
                     React.createElement(SkillDetailsPanel_1.default, { skill: props.selectedSkill, sites: props.sites, siteCollections: props.siteCollections, onClose: function () { if (props.selectedSkill)
-                            props.onSelectSkill(props.selectedSkill.id); }, onDeleteSkillSite: props.onDeleteSkillSite, onCreateSkill: props.onCreateSkill })))),
+                            props.onSelectSkill(props.selectedSkill.id); }, onDeleteSkillSite: props.onDeleteSkillSite, onCreateSkill: props.onCreateSkill, onActivateAgentAssetsFeature: props.onActivateAgentAssetsFeature })))),
             props.activeTab === 'usage' && (React.createElement("div", { className: styles.usageShell },
                 React.createElement("div", { className: styles.usageTopBar },
                     React.createElement("div", { className: styles.usageFilterChips },
                         usageSkillFilterId && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Skill: ", (_b = props.usageSkills.find(function (skill) { return skill.id === usageSkillFilterId; })) === null || _b === void 0 ? void 0 :
                             _b.name,
-                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear skill filter", onClick: function () { return setUsageSkillFilterId(undefined); } }))),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear skill filter", role: "button", tabIndex: 0, onClick: function () { return setUsageSkillFilterId(undefined); }, onKeyDown: function (event) { if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    setUsageSkillFilterId(undefined);
+                                } } }))),
                         usageSiteFilterId && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Site: ", (_c = props.sites.find(function (site) { return site.id === usageSiteFilterId; })) === null || _c === void 0 ? void 0 :
                             _c.name,
-                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear site filter", onClick: function () { return setUsageSiteFilterId(undefined); } }))),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear site filter", role: "button", tabIndex: 0, onClick: function () { return setUsageSiteFilterId(undefined); }, onKeyDown: function (event) { if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    setUsageSiteFilterId(undefined);
+                                } } }))),
                         usageCoverageFilter !== 'all' && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Coverage: ",
                             usageCoverageFilter === 'with-skills' ? 'with skills' : 'without skills',
-                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear coverage filter", onClick: function () { return setUsageCoverageFilter('all'); } }))),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear coverage filter", role: "button", tabIndex: 0, onClick: function () { return setUsageCoverageFilter('all'); }, onKeyDown: function (event) { if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    setUsageCoverageFilter('all');
+                                } } }))),
                         props.siteSearchText.trim() && (React.createElement(react_components_1.Badge, { appearance: "outline", className: styles.filterChip },
                             "Search: ",
                             props.siteSearchText.trim(),
-                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", onClick: function () { return props.onSiteSearchTextChange(''); } })))),
+                            React.createElement(react_icons_1.Dismiss12Regular, { className: styles.filterChipDismiss, "aria-label": "Clear search", role: "button", tabIndex: 0, onClick: function () { return props.onSiteSearchTextChange(''); }, onKeyDown: function (event) { if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    props.onSiteSearchTextChange('');
+                                } } })))),
                     React.createElement("div", { className: styles.toolbarActions },
                         React.createElement(react_components_1.Button, { appearance: "secondary", icon: React.createElement(react_icons_1.Add24Regular, null), onClick: function () {
                                 setUsageFiltersOpen(false);
@@ -431,7 +457,7 @@ function SkillsFactoryDashboard(props) {
                                 React.createElement(react_components_1.Text, { weight: "semibold" }, "Create Skill"),
                                 React.createElement(react_components_1.Caption1, null, "Create a new skill folder and SKILL.md in a selected site.")),
                             React.createElement(react_components_1.Button, { className: styles.filterPanelClose, appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close create skill", disabled: createSkillSubmitting, onClick: function () { return setCreateSkillOpen(false); } })),
-                        React.createElement(CreateSkillForm_1.default, { sites: props.sites, onCreateSkill: props.onCreateSkill, onCreated: function () { return setCreateSkillOpen(false); }, onSubmittingChange: setCreateSkillSubmitting }))),
+                        React.createElement(CreateSkillForm_1.default, { sites: props.sites, onCreateSkill: props.onCreateSkill, onActivateAgentAssetsFeature: props.onActivateAgentAssetsFeature, onCreated: function () { return setCreateSkillOpen(false); }, onSubmittingChange: setCreateSkillSubmitting }))),
                 React.createElement("div", { className: styles.kpiGrid }, [
                     ['Total Sites', visibleSites.length, 'Sites in the current view'],
                     ['Total Skills', visibleSkills.length, 'Skills used by those sites'],
@@ -506,8 +532,9 @@ function SkillsFactoryDashboard(props) {
                                         React.createElement("div", { className: styles.distributionTrack },
                                             React.createElement("div", { className: styles.distributionFill, style: { width: bucket.count > 0 ? "".concat(Math.max(4, percentage), "%") : '0%' } }),
                                             React.createElement("div", { className: styles.distributionTrackLabel },
-                                                percentage,
-                                                "%")),
+                                                React.createElement("span", { className: styles.distributionTrackLabelText },
+                                                    percentage,
+                                                    "%"))),
                                         React.createElement("div", { className: styles.distributionMeta },
                                             React.createElement(react_components_1.Text, { weight: "semibold" }, bucket.count))));
                                 }))));

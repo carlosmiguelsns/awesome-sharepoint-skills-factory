@@ -58,6 +58,26 @@ export interface ITenantUserIdentity {
   email: string;
 }
 
+const AGENT_ASSETS_FEATURE_ID: string = '9e14d30c-1e0d-4c8c-8dcb-a8d29f7d4c15';
+
+export class AgentAssetsLibraryNotFoundError extends Error {
+  public readonly siteUrl: string;
+
+  constructor(siteUrl: string) {
+    super('Agent Assets library was not found on the selected site.');
+    Object.setPrototypeOf(this, AgentAssetsLibraryNotFoundError.prototype);
+    this.name = 'AgentAssetsLibraryNotFoundError';
+    this.siteUrl = siteUrl;
+  }
+}
+
+export function isAgentAssetsLibraryNotFoundError(error: unknown): error is AgentAssetsLibraryNotFoundError {
+  return (
+    error instanceof AgentAssetsLibraryNotFoundError ||
+    (error instanceof Error && error.name === 'AgentAssetsLibraryNotFoundError' && typeof (error as AgentAssetsLibraryNotFoundError).siteUrl === 'string')
+  );
+}
+
 function buildIdFromUrl(url: string): string {
   return url.replace(/^https?:\/\//i, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
 }
@@ -264,7 +284,7 @@ export class TenantSharePointDataService {
     reportProgress('Locating the Agent Assets library…');
     const libraryInfo: { rootFolderServerRelativeUrl: string } | undefined = await this.getAgentAssetsLibraryAsync(request.siteUrl);
     if (!libraryInfo) {
-      throw new Error('Agent Assets library was not found on the selected site.');
+      throw new AgentAssetsLibraryNotFoundError(request.siteUrl);
     }
 
     const skillsRootServerRelativeUrl: string = `${libraryInfo.rootFolderServerRelativeUrl.replace(/\/$/, '')}/skills`;
@@ -415,6 +435,23 @@ export class TenantSharePointDataService {
       itemCount: data.ItemCount || 0,
       rootFolderServerRelativeUrl
     };
+  }
+
+  public async activateAgentAssetsFeatureAsync(siteUrl: string): Promise<void> {
+    const response: SPHttpClientResponse = await this.spHttpClient.post(
+      `${siteUrl}/_api/site/features/add(guid'${AGENT_ASSETS_FEATURE_ID}')`,
+      SPHttpClient.configurations.v1,
+      {
+        headers: {
+          Accept: 'application/json;odata=nometadata',
+          'Content-Type': 'application/json;odata=nometadata'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to activate the Agent Assets feature on the selected site.');
+    }
   }
 
   private async ensureFolderExistsAsync(siteUrl: string, parentFolderServerRelativeUrl: string, folderName: string): Promise<void> {

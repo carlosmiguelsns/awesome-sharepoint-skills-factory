@@ -35,7 +35,9 @@ import '@toast-ui/editor/dist/toastui-editor.css';
 
 import type { SharePointSite, SiteCollection, Skill, SkillSiteRevision } from '../../models';
 import { formatLongDate } from '../../utils/dateHelpers';
-import type { ICreateSkillRequest, ICreateSkillResult } from '../../services/TenantSharePointDataService';
+import { isTeamOrCommunicationSiteTemplate } from '../../utils/siteHelpers';
+import { isAgentAssetsLibraryNotFoundError, type ICreateSkillRequest, type ICreateSkillResult } from '../../services/TenantSharePointDataService';
+import ActivateAgentAssetsDialog from '../ActivateAgentAssetsDialog';
 import SkillCompareDialog from './SkillCompareDialog';
 
 const SITES_PAGE_SIZE: number = 8;
@@ -132,8 +134,20 @@ const useStyles = makeStyles({
     color: tokens.colorPaletteRedForeground1
   },
   deleteConfirmButton: {
-    backgroundColor: tokens.colorPaletteRedBackground3,
-    color: tokens.colorPaletteRedForeground2
+    backgroundColor: tokens.colorStatusDangerBackground3,
+    color: tokens.colorNeutralForegroundOnBrand,
+    ':hover': {
+      backgroundColor: tokens.colorStatusDangerBackground3Hover,
+      color: tokens.colorNeutralForegroundOnBrand
+    },
+    ':hover:active': {
+      backgroundColor: tokens.colorStatusDangerBackground3Pressed,
+      color: tokens.colorNeutralForegroundOnBrand
+    }
+  },
+  dialogSpinner: {
+    marginTop: tokens.spacingVerticalM,
+    marginBottom: tokens.spacingVerticalM
   },
   cloneField: {
     display: 'flex',
@@ -179,6 +193,7 @@ export interface ISkillDetailsPanelProps {
   onClose?: () => void;
   onDeleteSkillSite: (site: SharePointSite, skillFolderUrl: string) => Promise<void>;
   onCreateSkill: (request: ICreateSkillRequest) => Promise<ICreateSkillResult>;
+  onActivateAgentAssetsFeature: (siteUrl: string) => Promise<void>;
 }
 
 interface IDeleteTarget {
@@ -207,6 +222,9 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
   const [isCloning, setIsCloning] = React.useState<boolean>(false);
   const [cloneStatus, setCloneStatus] = React.useState<string>('');
   const [cloneError, setCloneError] = React.useState<string>('');
+  const [agentAssetsPromptSiteUrl, setAgentAssetsPromptSiteUrl] = React.useState<string | undefined>(undefined);
+  const [isActivatingFeature, setIsActivatingFeature] = React.useState<boolean>(false);
+  const [activateError, setActivateError] = React.useState<string>('');
 
   React.useEffect(() => {
     setPreviewSiteId(undefined);
@@ -219,6 +237,8 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
     setCloneSource(undefined);
     setCloneTargetCollectionId(undefined);
     setCloneError('');
+    setAgentAssetsPromptSiteUrl(undefined);
+    setActivateError('');
   }, [skill?.id]);
 
   const handleConfirmDelete = React.useCallback(async (): Promise<void> => {
@@ -271,8 +291,17 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
   );
 
   const cloneTargetCollections: SiteCollection[] = React.useMemo(
-    () => (skill ? props.siteCollections.filter((collection: SiteCollection) => skill.siteCollectionIds.indexOf(collection.id) === -1) : []),
-    [props.siteCollections, skill]
+    () =>
+      skill
+        ? props.siteCollections.filter(
+            (collection: SiteCollection) =>
+              skill.siteCollectionIds.indexOf(collection.id) === -1 &&
+              props.sites.some(
+                (site: SharePointSite) => site.siteCollectionId === collection.id && isTeamOrCommunicationSiteTemplate(site.template)
+              )
+          )
+        : [],
+    [props.siteCollections, props.sites, skill]
   );
 
   const handleConfirmClone = React.useCallback(async (): Promise<void> => {
@@ -299,11 +328,39 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
       setCloneSource(undefined);
       setCloneTargetCollectionId(undefined);
     } catch (error: unknown) {
-      setCloneError(error instanceof Error ? error.message : 'Failed to copy the skill.');
+      if (isAgentAssetsLibraryNotFoundError(error)) {
+        setAgentAssetsPromptSiteUrl(error.siteUrl);
+        setCloneStatus('');
+      } else {
+        setCloneError(error instanceof Error ? error.message : 'Failed to copy the skill.');
+      }
     } finally {
       setIsCloning(false);
     }
   }, [cloneSource, cloneTargetCollectionId, props, resolveSiteForCollection, skill]);
+
+  const handleCancelActivateFeature = React.useCallback((): void => {
+    setAgentAssetsPromptSiteUrl(undefined);
+    setActivateError('');
+  }, []);
+
+  const handleConfirmActivateFeature = React.useCallback(async (): Promise<void> => {
+    if (!agentAssetsPromptSiteUrl) {
+      return;
+    }
+
+    setIsActivatingFeature(true);
+    setActivateError('');
+    try {
+      await props.onActivateAgentAssetsFeature(agentAssetsPromptSiteUrl);
+      setAgentAssetsPromptSiteUrl(undefined);
+      await handleConfirmClone();
+    } catch (activationError: unknown) {
+      setActivateError(activationError instanceof Error ? activationError.message : 'Failed to activate the Agent Assets feature.');
+    } finally {
+      setIsActivatingFeature(false);
+    }
+  }, [agentAssetsPromptSiteUrl, handleConfirmClone, props]);
 
   const skillSites: SharePointSite[] = React.useMemo(
     () => (skill ? props.sites.filter((site: SharePointSite) => skill.siteIds.indexOf(site.id) !== -1) : []),
@@ -495,7 +552,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
             <DialogTitle>Delete this skill?</DialogTitle>
             <DialogContent>
               {isDeleting ? (
-                <Spinner label="Deleting the skill folder and its contents…" />
+                <Spinner className={styles.dialogSpinner} label="Deleting the skill folder and its contents…" />
               ) : (
                 <>
                   <Body1>
@@ -510,7 +567,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
               <Button appearance="secondary" disabled={isDeleting} onClick={() => { setDeleteTarget(undefined); setDeleteError(''); }}>
                 Cancel
               </Button>
-              <Button className={styles.deleteConfirmButton} disabled={isDeleting} onClick={() => { void handleConfirmDelete(); }}>
+              <Button appearance="primary" className={styles.deleteConfirmButton} disabled={isDeleting} onClick={() => { void handleConfirmDelete(); }}>
                 {isDeleting ? 'Deleting…' : 'Delete skill'}
               </Button>
             </DialogActions>
@@ -524,7 +581,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
             <DialogTitle>Copy skill to another site collection</DialogTitle>
             <DialogContent>
               {isCloning ? (
-                <Spinner label={cloneStatus || 'Copying skill…'} />
+                <Spinner className={styles.dialogSpinner} label={cloneStatus || 'Copying skill…'} />
               ) : (
                 <>
                   <Body1>
@@ -565,6 +622,15 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
         </DialogSurface>
       </Dialog>
 
+      <ActivateAgentAssetsDialog
+        open={Boolean(agentAssetsPromptSiteUrl)}
+        siteUrl={agentAssetsPromptSiteUrl}
+        isActivating={isActivatingFeature}
+        error={activateError}
+        onConfirm={() => { void handleConfirmActivateFeature(); }}
+        onCancel={handleCancelActivateFeature}
+      />
+
       <div className={styles.root}>
         <div className={styles.section}>
           <div className={styles.sitesSectionHeader}>
@@ -600,6 +666,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
                   <DataGridRow>
                     {({ renderHeaderCell, columnId }) => (
                       <DataGridHeaderCell
+                        aria-label={columnId === 'compare' ? 'Compare' : columnId === 'actions' ? 'Actions' : undefined}
                         style={
                           columnId === 'compare' || columnId === 'actions'
                             ? { width: columnWidths[columnId as string], padding: 0 }

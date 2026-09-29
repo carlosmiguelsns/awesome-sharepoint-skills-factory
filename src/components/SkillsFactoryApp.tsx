@@ -64,8 +64,8 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     [props.currentUserEmail, props.currentUserName, props.msGraphClientFactory, props.siteUrl, props.spHttpClient]
   );
   const siteService: SiteService = React.useMemo(
-    () => new SiteService(props.msGraphClientFactory),
-    [props.msGraphClientFactory]
+    () => new SiteService(props.msGraphClientFactory, props.spHttpClient),
+    [props.msGraphClientFactory, props.spHttpClient]
   );
   const [skills, setSkills] = React.useState<Skill[]>([]);
   const [sites, setSites] = React.useState<SharePointSite[]>([]);
@@ -112,19 +112,21 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
       setSkills(allSkills);
       setSites(allSites);
       setSiteCollections(
-        allSites.reduce((collections: SiteCollection[], site: SharePointSite) => {
-          if (collections.some((collection: SiteCollection) => collection.id === site.siteCollectionId)) {
+        allSites
+          .reduce((collections: SiteCollection[], site: SharePointSite) => {
+            if (collections.some((collection: SiteCollection) => collection.id === site.siteCollectionId)) {
+              return collections;
+            }
+            collections.push({
+              id: site.siteCollectionId,
+              name: site.siteCollectionName || site.name,
+              url: site.url,
+              owner: site.owner,
+              description: site.description
+            });
             return collections;
-          }
-          collections.push({
-            id: site.siteCollectionId,
-            name: site.siteCollectionName || site.name,
-            url: site.url,
-            owner: site.owner,
-            description: site.description
-          });
-          return collections;
-        }, [])
+          }, [])
+          .sort((left: SiteCollection, right: SiteCollection) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }))
       );
       setIsLoading(false);
     }
@@ -156,6 +158,13 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
       await refreshSkills();
     },
     [refreshSkills, skillService]
+  );
+
+  const handleActivateAgentAssetsFeature = React.useCallback(
+    async (siteUrl: string): Promise<void> => {
+      await skillService.activateAgentAssetsFeature(siteUrl);
+    },
+    [skillService]
   );
 
   const mySkills: Skill[] = React.useMemo(
@@ -243,6 +252,7 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             onStartCreateSkill={handleStartCreateSkill}
             onCancelCreateSkill={handleCancelCreateSkill}
             onCreateSkill={handleCreateSkill}
+            onActivateAgentAssetsFeature={handleActivateAgentAssetsFeature}
             onSkillCreated={handleCancelCreateSkill}
           />
         ) : (
@@ -265,6 +275,7 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
             onSelectSite={(_: string) => undefined}
             onCreateSkill={handleCreateSkill}
             onDeleteSkillSite={handleDeleteSkillSite}
+            onActivateAgentAssetsFeature={handleActivateAgentAssetsFeature}
             onRequestFullscreen={props.onRequestFullscreen}
           />
         )}

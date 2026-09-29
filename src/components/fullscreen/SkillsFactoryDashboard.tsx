@@ -160,11 +160,19 @@ const useStyles = makeStyles({
     inset: 0,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
+  },
+  distributionTrackLabelText: {
+    // The track's fill can be either colorBrandBackground (saturated) or colorNeutralBackground3
+    // (near-white) depending on the percentage, so the label needs its own solid backdrop rather
+    // than a single fixed foreground color — colorNeutralForeground1 alone drops to ~2.9:1 against
+    // colorBrandBackground in light theme.
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: tokens.borderRadiusSmall,
+    padding: `0 ${tokens.spacingHorizontalXS}`,
     fontSize: tokens.fontSizeBase200,
     fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
-    textShadow: `0 0 3px ${tokens.colorNeutralBackground1}, 0 0 3px ${tokens.colorNeutralBackground1}`
+    color: tokens.colorNeutralForeground1
   },
   distributionMeta: { display: 'flex', justifyContent: 'flex-end', gap: tokens.spacingHorizontalXS, whiteSpace: 'nowrap' },
   usageViewport: { paddingRight: tokens.spacingHorizontalXXS, overflowX: 'auto', overflowY: 'hidden' },
@@ -207,6 +215,7 @@ export interface ISkillsFactoryDashboardProps {
   onSelectSite: (siteId: string) => void;
   onCreateSkill: (request: { siteUrl: string; skillName: string; skillContent: string; onProgress?: (message: string) => void }) => Promise<{ normalizedSkillName: string; skillFolderUrl: string; skillMarkdownUrl: string }>;
   onDeleteSkillSite: (site: SharePointSite, skillFolderUrl: string) => Promise<void>;
+  onActivateAgentAssetsFeature: (siteUrl: string) => Promise<void>;
   onRequestFullscreen: () => Promise<void>;
 }
 
@@ -389,13 +398,27 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                 {mySkillsOnly ? (
                   <Badge appearance="outline" className={styles.filterChip}>
                     Owner: You
-                    <Dismiss12Regular className={styles.filterChipDismiss} aria-label="Clear owner filter" onClick={() => setMySkillsOnly(false)} />
+                    <Dismiss12Regular
+                      className={styles.filterChipDismiss}
+                      aria-label="Clear owner filter"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setMySkillsOnly(false)}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setMySkillsOnly(false); } }}
+                    />
                   </Badge>
                 ) : null}
                 {props.searchText.trim() ? (
                   <Badge appearance="outline" className={styles.filterChip}>
                     Search: {props.searchText.trim()}
-                    <Dismiss12Regular className={styles.filterChipDismiss} aria-label="Clear search" onClick={() => props.onSearchTextChange('')} />
+                    <Dismiss12Regular
+                      className={styles.filterChipDismiss}
+                      aria-label="Clear search"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => props.onSearchTextChange('')}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); props.onSearchTextChange(''); } }}
+                    />
                   </Badge>
                 ) : null}
               </div>
@@ -440,6 +463,7 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                 onClose={() => { if (props.selectedSkill) props.onSelectSkill(props.selectedSkill.id); }}
                 onDeleteSkillSite={props.onDeleteSkillSite}
                 onCreateSkill={props.onCreateSkill}
+                onActivateAgentAssetsFeature={props.onActivateAgentAssetsFeature}
               />
             </div>
           </div>
@@ -452,25 +476,53 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                 {usageSkillFilterId && (
                   <Badge appearance="outline" className={styles.filterChip}>
                     Skill: {props.usageSkills.find((skill) => skill.id === usageSkillFilterId)?.name}
-                    <Dismiss12Regular className={styles.filterChipDismiss} aria-label="Clear skill filter" onClick={() => setUsageSkillFilterId(undefined)} />
+                    <Dismiss12Regular
+                      className={styles.filterChipDismiss}
+                      aria-label="Clear skill filter"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setUsageSkillFilterId(undefined)}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setUsageSkillFilterId(undefined); } }}
+                    />
                   </Badge>
                 )}
                 {usageSiteFilterId && (
                   <Badge appearance="outline" className={styles.filterChip}>
                     Site: {props.sites.find((site) => site.id === usageSiteFilterId)?.name}
-                    <Dismiss12Regular className={styles.filterChipDismiss} aria-label="Clear site filter" onClick={() => setUsageSiteFilterId(undefined)} />
+                    <Dismiss12Regular
+                      className={styles.filterChipDismiss}
+                      aria-label="Clear site filter"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setUsageSiteFilterId(undefined)}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setUsageSiteFilterId(undefined); } }}
+                    />
                   </Badge>
                 )}
                 {usageCoverageFilter !== 'all' && (
                   <Badge appearance="outline" className={styles.filterChip}>
                     Coverage: {usageCoverageFilter === 'with-skills' ? 'with skills' : 'without skills'}
-                    <Dismiss12Regular className={styles.filterChipDismiss} aria-label="Clear coverage filter" onClick={() => setUsageCoverageFilter('all')} />
+                    <Dismiss12Regular
+                      className={styles.filterChipDismiss}
+                      aria-label="Clear coverage filter"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setUsageCoverageFilter('all')}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setUsageCoverageFilter('all'); } }}
+                    />
                   </Badge>
                 )}
                 {props.siteSearchText.trim() && (
                   <Badge appearance="outline" className={styles.filterChip}>
                     Search: {props.siteSearchText.trim()}
-                    <Dismiss12Regular className={styles.filterChipDismiss} aria-label="Clear search" onClick={() => props.onSiteSearchTextChange('')} />
+                    <Dismiss12Regular
+                      className={styles.filterChipDismiss}
+                      aria-label="Clear search"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => props.onSiteSearchTextChange('')}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); props.onSiteSearchTextChange(''); } }}
+                    />
                   </Badge>
                 )}
               </div>
@@ -582,6 +634,7 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                   <CreateSkillForm
                     sites={props.sites}
                     onCreateSkill={props.onCreateSkill}
+                    onActivateAgentAssetsFeature={props.onActivateAgentAssetsFeature}
                     onCreated={() => setCreateSkillOpen(false)}
                     onSubmittingChange={setCreateSkillSubmitting}
                   />
@@ -660,7 +713,9 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
                                 <Text weight="semibold">{bucket.label}</Text>
                                 <div className={styles.distributionTrack}>
                                   <div className={styles.distributionFill} style={{ width: bucket.count > 0 ? `${Math.max(4, percentage)}%` : '0%' }} />
-                                  <div className={styles.distributionTrackLabel}>{percentage}%</div>
+                                  <div className={styles.distributionTrackLabel}>
+                                    <span className={styles.distributionTrackLabelText}>{percentage}%</span>
+                                  </div>
                                 </div>
                                 <div className={styles.distributionMeta}>
                                   <Text weight="semibold">{bucket.count}</Text>

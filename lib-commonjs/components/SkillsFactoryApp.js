@@ -27,7 +27,7 @@ function SkillsFactoryApp(props) {
     var skillService = React.useMemo(function () {
         return new SkillService_1.SkillService(props.spHttpClient, props.siteUrl, props.msGraphClientFactory, props.currentUserName, props.currentUserEmail);
     }, [props.currentUserEmail, props.currentUserName, props.msGraphClientFactory, props.siteUrl, props.spHttpClient]);
-    var siteService = React.useMemo(function () { return new SiteService_1.SiteService(props.msGraphClientFactory); }, [props.msGraphClientFactory]);
+    var siteService = React.useMemo(function () { return new SiteService_1.SiteService(props.msGraphClientFactory, props.spHttpClient); }, [props.msGraphClientFactory, props.spHttpClient]);
     var _a = React.useState([]), skills = _a[0], setSkills = _a[1];
     var _b = React.useState([]), sites = _b[0], setSites = _b[1];
     var _c = React.useState([]), siteCollections = _c[0], setSiteCollections = _c[1];
@@ -70,7 +70,8 @@ function SkillsFactoryApp(props) {
                             }
                             setSkills(allSkills);
                             setSites(allSites);
-                            setSiteCollections(allSites.reduce(function (collections, site) {
+                            setSiteCollections(allSites
+                                .reduce(function (collections, site) {
                                 if (collections.some(function (collection) { return collection.id === site.siteCollectionId; })) {
                                     return collections;
                                 }
@@ -82,7 +83,8 @@ function SkillsFactoryApp(props) {
                                     description: site.description
                                 });
                                 return collections;
-                            }, []));
+                            }, [])
+                                .sort(function (left, right) { return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }); }));
                             setIsLoading(false);
                             return [2 /*return*/];
                     }
@@ -133,6 +135,16 @@ function SkillsFactoryApp(props) {
             }
         });
     }); }, [refreshSkills, skillService]);
+    var handleActivateAgentAssetsFeature = React.useCallback(function (siteUrl) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+        return tslib_1.__generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, skillService.activateAgentAssetsFeature(siteUrl)];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    }); }, [skillService]);
     var mySkills = React.useMemo(function () { return skills.filter(function (skill) { return skill.isOwnedByCurrentUser; }); }, [skills]);
     var sortedMySkills = React.useMemo(function () { return mySkills.slice().sort(function (left, right) { return right.usageCount - left.usageCount || right.modifiedDate.localeCompare(left.modifiedDate); }); }, [mySkills]);
     var visibleMySkills = React.useMemo(function () { return (inlineSkillLimit === 'all' ? sortedMySkills : sortedMySkills.slice(0, inlineSkillLimit)); }, [sortedMySkills, inlineSkillLimit]);
@@ -179,6 +191,6 @@ function SkillsFactoryApp(props) {
     var theme = props.hostContext.theme === 'dark' ? react_components_1.webDarkTheme : react_components_1.webLightTheme;
     return (React.createElement(react_components_1.IdPrefixProvider, { value: "sharepoint-skills-factory-" },
         React.createElement(react_components_1.FluentProvider, { theme: theme, targetDocument: props.targetDocument, className: styles.root }, isLoading ? (React.createElement("div", { className: styles.loading },
-            React.createElement(react_components_1.Spinner, { label: discoveredSiteCount > 0 ? "".concat(loadingMessage, " ").concat(discoveredSiteCount, " sites discovered") : loadingMessage }))) : props.hostContext.displayMode === 'inline' ? (React.createElement(InlineSkillsView_1.default, { mode: inlineMode, skills: visibleMySkills, totalMySkillsCount: mySkills.length, skillLimit: inlineSkillLimit, currentUserName: props.currentUserName, sites: sites, onSelectSkill: function (skillId) { void handleSelectInlineSkill(skillId); }, onShowTopSkills: handleShowTopSkills, onShowAllSkills: handleShowAllSkills, onStartCreateSkill: handleStartCreateSkill, onCancelCreateSkill: handleCancelCreateSkill, onCreateSkill: handleCreateSkill, onSkillCreated: handleCancelCreateSkill })) : (React.createElement(SkillsFactoryDashboard_1.default, { hostContext: props.hostContext, targetDocument: props.targetDocument, currentUserName: props.currentUserName, activeTab: activeTab, onTabChange: handleTabChange, searchText: searchText, onSearchTextChange: setSearchText, siteSearchText: siteSearchText, onSiteSearchTextChange: setSiteSearchText, allSkills: skills, usageSkills: skills, siteCollections: siteCollections, sites: sites, selectedSkill: selectedSkill, onSelectSkill: handleToggleSelectSkill, onSelectSite: function (_) { return undefined; }, onCreateSkill: handleCreateSkill, onDeleteSkillSite: handleDeleteSkillSite, onRequestFullscreen: props.onRequestFullscreen })))));
+            React.createElement(react_components_1.Spinner, { label: discoveredSiteCount > 0 ? "".concat(loadingMessage, " ").concat(discoveredSiteCount, " sites discovered") : loadingMessage }))) : props.hostContext.displayMode === 'inline' ? (React.createElement(InlineSkillsView_1.default, { mode: inlineMode, skills: visibleMySkills, totalMySkillsCount: mySkills.length, skillLimit: inlineSkillLimit, currentUserName: props.currentUserName, sites: sites, onSelectSkill: function (skillId) { void handleSelectInlineSkill(skillId); }, onShowTopSkills: handleShowTopSkills, onShowAllSkills: handleShowAllSkills, onStartCreateSkill: handleStartCreateSkill, onCancelCreateSkill: handleCancelCreateSkill, onCreateSkill: handleCreateSkill, onActivateAgentAssetsFeature: handleActivateAgentAssetsFeature, onSkillCreated: handleCancelCreateSkill })) : (React.createElement(SkillsFactoryDashboard_1.default, { hostContext: props.hostContext, targetDocument: props.targetDocument, currentUserName: props.currentUserName, activeTab: activeTab, onTabChange: handleTabChange, searchText: searchText, onSearchTextChange: setSearchText, siteSearchText: siteSearchText, onSiteSearchTextChange: setSiteSearchText, allSkills: skills, usageSkills: skills, siteCollections: siteCollections, sites: sites, selectedSkill: selectedSkill, onSelectSkill: handleToggleSelectSkill, onSelectSite: function (_) { return undefined; }, onCreateSkill: handleCreateSkill, onDeleteSkillSite: handleDeleteSkillSite, onActivateAgentAssetsFeature: handleActivateAgentAssetsFeature, onRequestFullscreen: props.onRequestFullscreen })))));
 }
 //# sourceMappingURL=SkillsFactoryApp.js.map

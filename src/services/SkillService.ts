@@ -100,4 +100,20 @@ export class SkillService {
 
     return tenantService.deleteSkillAsync(request);
   }
+
+  public async activateAgentAssetsFeature(siteUrl: string): Promise<void> {
+    if (!this.spHttpClient || !this.siteUrl) {
+      throw new Error('SharePoint support is not available.');
+    }
+
+    const tenantService: TenantSharePointDataService = new TenantSharePointDataService(
+      this.spHttpClient,
+      this.siteUrl,
+      this.msGraphClientFactory,
+      this.currentUserName,
+      this.currentUserEmail
+    );
+
+    return tenantService.activateAgentAssetsFeatureAsync(siteUrl);
+  }
 }

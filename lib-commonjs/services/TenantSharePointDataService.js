@@ -1,9 +1,27 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TenantSharePointDataService = void 0;
+exports.TenantSharePointDataService = exports.AgentAssetsLibraryNotFoundError = void 0;
+exports.isAgentAssetsLibraryNotFoundError = isAgentAssetsLibraryNotFoundError;
 var tslib_1 = require("tslib");
 var sp_http_1 = require("@microsoft/sp-http");
 var textHelpers_1 = require("../utils/textHelpers");
+var AGENT_ASSETS_FEATURE_ID = '9e14d30c-1e0d-4c8c-8dcb-a8d29f7d4c15';
+var AgentAssetsLibraryNotFoundError = /** @class */ (function (_super) {
+    tslib_1.__extends(AgentAssetsLibraryNotFoundError, _super);
+    function AgentAssetsLibraryNotFoundError(siteUrl) {
+        var _this = _super.call(this, 'Agent Assets library was not found on the selected site.') || this;
+        Object.setPrototypeOf(_this, AgentAssetsLibraryNotFoundError.prototype);
+        _this.name = 'AgentAssetsLibraryNotFoundError';
+        _this.siteUrl = siteUrl;
+        return _this;
+    }
+    return AgentAssetsLibraryNotFoundError;
+}(Error));
+exports.AgentAssetsLibraryNotFoundError = AgentAssetsLibraryNotFoundError;
+function isAgentAssetsLibraryNotFoundError(error) {
+    return (error instanceof AgentAssetsLibraryNotFoundError ||
+        (error instanceof Error && error.name === 'AgentAssetsLibraryNotFoundError' && typeof error.siteUrl === 'string'));
+}
 function buildIdFromUrl(url) {
     return url.replace(/^https?:\/\//i, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
 }
@@ -255,7 +273,7 @@ var TenantSharePointDataService = /** @class */ (function () {
                     case 1:
                         libraryInfo = _a.sent();
                         if (!libraryInfo) {
-                            throw new Error('Agent Assets library was not found on the selected site.');
+                            throw new AgentAssetsLibraryNotFoundError(request.siteUrl);
                         }
                         skillsRootServerRelativeUrl = "".concat(libraryInfo.rootFolderServerRelativeUrl.replace(/\/$/, ''), "/skills");
                         reportProgress('Preparing the skills folder…');
@@ -438,6 +456,27 @@ var TenantSharePointDataService = /** @class */ (function () {
                                 itemCount: data.ItemCount || 0,
                                 rootFolderServerRelativeUrl: rootFolderServerRelativeUrl
                             }];
+                }
+            });
+        });
+    };
+    TenantSharePointDataService.prototype.activateAgentAssetsFeatureAsync = function (siteUrl) {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var response;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.spHttpClient.post("".concat(siteUrl, "/_api/site/features/add(guid'").concat(AGENT_ASSETS_FEATURE_ID, "')"), sp_http_1.SPHttpClient.configurations.v1, {
+                            headers: {
+                                Accept: 'application/json;odata=nometadata',
+                                'Content-Type': 'application/json;odata=nometadata'
+                            }
+                        })];
+                    case 1:
+                        response = _a.sent();
+                        if (!response.ok) {
+                            throw new Error('Failed to activate the Agent Assets feature on the selected site.');
+                        }
+                        return [2 /*return*/];
                 }
             });
         });
