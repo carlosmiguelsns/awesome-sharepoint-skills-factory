@@ -15,18 +15,22 @@ var SkillService = /** @class */ (function () {
     }
     SkillService.prototype.getAllSkillsAsync = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var tenantService;
-            return tslib_1.__generator(this, function (_a) {
-                if (this.spHttpClient && this.siteUrl) {
-                    try {
+            var tenantService, _a;
+            return tslib_1.__generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        if (!(this.spHttpClient && this.siteUrl)) return [3 /*break*/, 4];
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
                         tenantService = new TenantSharePointDataService_1.TenantSharePointDataService(this.spHttpClient, this.siteUrl, this.msGraphClientFactory, this.currentUserName, this.currentUserEmail);
-                        return [2 /*return*/, tenantService.getTenantSkillsAsync()];
-                    }
-                    catch (_b) {
-                        // Surface an empty tenant result when discovery is unavailable.
-                    }
+                        return [4 /*yield*/, tenantService.getTenantSkillsAsync()];
+                    case 2: return [2 /*return*/, _b.sent()];
+                    case 3:
+                        _a = _b.sent();
+                        return [3 /*break*/, 4];
+                    case 4: return [2 /*return*/, []];
                 }
-                return [2 /*return*/, []];
             });
         });
     };

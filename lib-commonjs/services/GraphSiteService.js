@@ -13,17 +13,6 @@ function toGraphApiPath(nextLink) {
         return nextLink.replace(/^\//, '');
     }
 }
-function isVisibleSite(site) {
-    var webUrl = "".concat(site.webUrl || '').toLowerCase();
-    if (webUrl.indexOf('contentstorage') !== -1 ||
-        webUrl.indexOf('content storage') !== -1 ||
-        webUrl.indexOf('appcatalog') !== -1 ||
-        webUrl.indexOf('personal') !== -1 ||
-        webUrl.indexOf('groupforanswersinvivaengagedonotdelete') !== -1) {
-        return false;
-    }
-    return true;
-}
 function normalizeSite(site) {
     var _a, _b;
     var webUrl = site.webUrl || '';
@@ -108,7 +97,7 @@ var GraphSiteService = /** @class */ (function () {
                     case 3:
                         response = _b.sent();
                         pageSites = (response.value || [])
-                            .filter(function (site) { return isVisibleSite(site); })
+                            .filter(function (site) { return (0, siteHelpers_1.isVisibleSite)(site); })
                             .map(function (site) { return normalizeSite(site); })
                             .filter(function (site) { return Boolean(site); })
                             .filter(function (site) { return !seenIds.has(site.id); });

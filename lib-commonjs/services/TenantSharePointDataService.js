@@ -4,6 +4,7 @@ exports.TenantSharePointDataService = exports.AgentAssetsLibraryNotFoundError = 
 exports.isAgentAssetsLibraryNotFoundError = isAgentAssetsLibraryNotFoundError;
 var tslib_1 = require("tslib");
 var sp_http_1 = require("@microsoft/sp-http");
+var siteHelpers_1 = require("../utils/siteHelpers");
 var textHelpers_1 = require("../utils/textHelpers");
 var AGENT_ASSETS_FEATURE_ID = '9e14d30c-1e0d-4c8c-8dcb-a8d29f7d4c15';
 var AgentAssetsLibraryNotFoundError = /** @class */ (function (_super) {
@@ -382,7 +383,7 @@ var TenantSharePointDataService = /** @class */ (function () {
                         response = _d.sent();
                         for (_i = 0, _a = response.value || []; _i < _a.length; _i++) {
                             site = _a[_i];
-                            if (!site.webUrl) {
+                            if (!site.webUrl || !(0, siteHelpers_1.isVisibleSite)(site)) {
                                 continue;
                             }
                             collectionUrl = getCollectionUrlFromSiteUrl(site.webUrl);

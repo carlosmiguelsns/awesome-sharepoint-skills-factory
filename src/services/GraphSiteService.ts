@@ -1,7 +1,7 @@
 import { SPHttpClient, type MSGraphClientFactory, type MSGraphClientV3, type SPHttpClientResponse } from '@microsoft/sp-http';
 
 import type { SharePointSite } from '../models';
-import { buildIdFromUrl, getSiteCollectionNameFromUrl, getSiteCollectionUrl } from '../utils/siteHelpers';
+import { buildIdFromUrl, getSiteCollectionNameFromUrl, getSiteCollectionUrl, isVisibleSite } from '../utils/siteHelpers';
 
 interface IGraphSiteCollection {
   id?: string;
@@ -37,22 +37,6 @@ function toGraphApiPath(nextLink: string): string {
   } catch {
     return nextLink.replace(/^\//, '');
   }
-}
-
-function isVisibleSite(site: IGraphSiteResponse): boolean {
-  const webUrl: string = `${site.webUrl || ''}`.toLowerCase();
-
-  if (
-    webUrl.indexOf('contentstorage') !== -1 ||
-    webUrl.indexOf('content storage') !== -1 ||
-    webUrl.indexOf('appcatalog') !== -1 ||
-    webUrl.indexOf('personal') !== -1 ||
-    webUrl.indexOf('groupforanswersinvivaengagedonotdelete') !== -1
-  ) {
-    return false;
-  }
-
-  return true;
 }
 
 function normalizeSite(site: IGraphSiteResponse): SharePointSite | undefined {

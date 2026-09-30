@@ -30,3 +30,29 @@ export function isTeamOrCommunicationSiteTemplate(webTemplate: string | undefine
   const normalized: string = (webTemplate || '').split('#')[0].trim().toUpperCase();
   return CREATABLE_SITE_WEB_TEMPLATES.has(normalized);
 }
+
+export interface IVisibleSiteCandidate {
+  webUrl?: string;
+  name?: string;
+  displayName?: string;
+}
+
+// Shared by both tenant site-discovery paths (GraphSiteService and
+// TenantSharePointDataService) so system/non-content sites are excluded consistently
+// everywhere, not just in the Sites/Usage view.
+export function isVisibleSite(site: IVisibleSiteCandidate): boolean {
+  const webUrl: string = `${site.webUrl || ''}`.toLowerCase();
+  const siteName: string = `${site.displayName || site.name || ''}`.toLowerCase();
+
+  return (
+    webUrl.indexOf('contentstorage') === -1 &&
+    webUrl.indexOf('content storage') === -1 &&
+    webUrl.indexOf('appcatalog') === -1 &&
+    webUrl.indexOf('personal') === -1 &&
+    webUrl.indexOf('groupforanswersinvivaengagedonotdelete') === -1 &&
+    webUrl.indexOf('contenttypehub') === -1 &&
+    siteName.indexOf('content type hub') === -1 &&
+    webUrl.indexOf('allcompany') === -1 &&
+    siteName.indexOf('all company') === -1
+  );
+}

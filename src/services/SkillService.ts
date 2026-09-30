@@ -26,7 +26,7 @@ export class SkillService {
           this.currentUserName,
           this.currentUserEmail
         );
-        return tenantService.getTenantSkillsAsync();
+        return await tenantService.getTenantSkillsAsync();
       } catch {
         // Surface an empty tenant result when discovery is unavailable.
       }

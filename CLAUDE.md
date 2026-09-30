@@ -49,7 +49,7 @@ Both services independently call `GET /sites?search=*` and paginate — there's 
 
 - Uses the **delegated-safe** `GET /sites?search=*` endpoint, not `GET /sites/getAllSites` (that one is app-only and unsupported in the delegated SPFx Graph client context).
 - Always paginate via `@odata.nextLink` until exhausted (see `toGraphApiPath` in `GraphSiteService.ts` for turning a full nextLink URL back into a relative Graph API path).
-- `GraphSiteService.isVisibleSite` filters out non-content sites (content storage, app catalog, OneDrive/"personal", the Viva Engage answers group) — extend this filter rather than re-filtering downstream.
+- `isVisibleSite` (`src/utils/siteHelpers.ts`) filters out non-content sites (content storage, app catalog, OneDrive/"personal", the Viva Engage answers group, the Content Type Hub, the "All Company" site) — shared by both `GraphSiteService` and `TenantSharePointDataService`'s site discovery so the two paths stay consistent; extend this filter rather than re-filtering downstream.
 - Requires the delegated Graph permission `Sites.Read.All`, declared in `config/package-solution.json` under `webApiPermissionRequests` and requiring tenant admin consent.
 - If Graph access is unavailable, discovery returns an empty array rather than falling back to an unscoped/elevated path — preserve this behavior; don't silently broaden permissions to work around a missing consent.
 

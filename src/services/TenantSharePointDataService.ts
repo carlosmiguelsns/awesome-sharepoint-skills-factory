@@ -1,6 +1,7 @@
 import { type MSGraphClientFactory, type MSGraphClientV3, SPHttpClient, type SPHttpClientResponse } from '@microsoft/sp-http';
 
 import type { SharePointSite, SiteCollection, Skill, SkillSiteRevision } from '../models';
+import { isVisibleSite } from '../utils/siteHelpers';
 import { normalizeSearch, normalizeSkillFolderName } from '../utils/textHelpers';
 
 interface ISharePointFolder {
@@ -369,11 +370,11 @@ export class TenantSharePointDataService {
     let nextPath: string | undefined = 'sites?search=*';
 
     while (nextPath) {
-      const response: { value?: Array<{ id?: string; name?: string; webUrl?: string; siteCollection?: { id?: string; hostName?: string } }>; '@odata.nextLink'?: string } =
+      const response: { value?: Array<{ id?: string; name?: string; displayName?: string; webUrl?: string; siteCollection?: { id?: string; hostName?: string } }>; '@odata.nextLink'?: string } =
         await graphClient.api(nextPath).get();
 
       for (const site of response.value || []) {
-        if (!site.webUrl) {
+        if (!site.webUrl || !isVisibleSite(site)) {
           continue;
         }
 

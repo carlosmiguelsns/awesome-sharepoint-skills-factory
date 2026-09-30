@@ -125,14 +125,29 @@ var useStyles = (0, react_components_1.makeStyles)({
         flexDirection: 'column',
         gap: react_components_1.tokens.spacingVerticalXXS
     },
-    select: {
-        minHeight: '32px',
-        borderRadius: react_components_1.tokens.borderRadiusMedium,
+    cloneTargetHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: react_components_1.tokens.spacingHorizontalS
+    },
+    cloneTargetList: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: react_components_1.tokens.spacingVerticalXXS,
+        maxHeight: '220px',
+        overflowY: 'auto',
         border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
-        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
-        color: react_components_1.tokens.colorNeutralForeground1,
-        padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS),
-        font: 'inherit'
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        padding: react_components_1.tokens.spacingVerticalS
+    },
+    cloneResultsList: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: react_components_1.tokens.spacingVerticalXXS
+    },
+    cloneResultError: {
+        color: react_components_1.tokens.colorPaletteRedForeground1
     }
 });
 function formatBytes(size) {
@@ -165,13 +180,14 @@ function SkillDetailsPanel(props) {
     var _k = React.useState(false), isDeleting = _k[0], setIsDeleting = _k[1];
     var _l = React.useState(''), deleteError = _l[0], setDeleteError = _l[1];
     var _m = React.useState(undefined), cloneSource = _m[0], setCloneSource = _m[1];
-    var _o = React.useState(undefined), cloneTargetCollectionId = _o[0], setCloneTargetCollectionId = _o[1];
-    var _p = React.useState(false), isCloning = _p[0], setIsCloning = _p[1];
-    var _q = React.useState(''), cloneStatus = _q[0], setCloneStatus = _q[1];
-    var _r = React.useState(''), cloneError = _r[0], setCloneError = _r[1];
-    var _s = React.useState(undefined), agentAssetsPromptSiteUrl = _s[0], setAgentAssetsPromptSiteUrl = _s[1];
-    var _t = React.useState(false), isActivatingFeature = _t[0], setIsActivatingFeature = _t[1];
-    var _u = React.useState(''), activateError = _u[0], setActivateError = _u[1];
+    var _o = React.useState([]), cloneTargetCollectionIds = _o[0], setCloneTargetCollectionIds = _o[1];
+    var _p = React.useState([]), cloneResults = _p[0], setCloneResults = _p[1];
+    var _q = React.useState(false), isCloning = _q[0], setIsCloning = _q[1];
+    var _r = React.useState(''), cloneStatus = _r[0], setCloneStatus = _r[1];
+    var _s = React.useState(''), cloneError = _s[0], setCloneError = _s[1];
+    var _t = React.useState(undefined), agentAssetsPromptSiteUrl = _t[0], setAgentAssetsPromptSiteUrl = _t[1];
+    var _u = React.useState(false), isActivatingFeature = _u[0], setIsActivatingFeature = _u[1];
+    var _v = React.useState(''), activateError = _v[0], setActivateError = _v[1];
     React.useEffect(function () {
         setPreviewSiteId(undefined);
         setCompareSiteIds([]);
@@ -181,7 +197,8 @@ function SkillDetailsPanel(props) {
         setDeleteTarget(undefined);
         setDeleteError('');
         setCloneSource(undefined);
-        setCloneTargetCollectionId(undefined);
+        setCloneTargetCollectionIds([]);
+        setCloneResults([]);
         setCloneError('');
         setAgentAssetsPromptSiteUrl(undefined);
         setActivateError('');
@@ -239,53 +256,101 @@ function SkillDetailsPanel(props) {
             })
             : [];
     }, [props.siteCollections, props.sites, skill]);
+    var toggleCloneTargetCollection = React.useCallback(function (collectionId, checked) {
+        setCloneTargetCollectionIds(function (current) {
+            if (checked) {
+                return current.indexOf(collectionId) !== -1 ? current : tslib_1.__spreadArray(tslib_1.__spreadArray([], current, true), [collectionId], false);
+            }
+            return current.filter(function (id) { return id !== collectionId; });
+        });
+    }, []);
+    var handleToggleSelectAllCloneTargets = React.useCallback(function (checked) {
+        setCloneTargetCollectionIds(checked ? cloneTargetCollections.map(function (collection) { return collection.id; }) : []);
+    }, [cloneTargetCollections]);
     var handleConfirmClone = React.useCallback(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-        var targetSite, error_2;
+        var successfulIds, pendingCollectionIds, nextResults, _loop_1, index, state_1;
         return tslib_1.__generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (!cloneSource || !cloneTargetCollectionId || !skill) {
+                    if (!cloneSource || !skill || !cloneTargetCollectionIds.length) {
                         return [2 /*return*/];
                     }
-                    targetSite = resolveSiteForCollection(cloneTargetCollectionId);
-                    if (!targetSite) {
-                        setCloneError('Could not resolve a destination site for that site collection.');
+                    successfulIds = new Set(cloneResults.filter(function (result) { return result.status === 'success'; }).map(function (result) { return result.collectionId; }));
+                    pendingCollectionIds = cloneTargetCollectionIds.filter(function (id) { return !successfulIds.has(id); });
+                    if (!pendingCollectionIds.length) {
                         return [2 /*return*/];
                     }
                     setIsCloning(true);
                     setCloneError('');
+                    nextResults = cloneResults.filter(function (result) { return successfulIds.has(result.collectionId); });
+                    _loop_1 = function (index) {
+                        var collectionId, collection, collectionName, targetSite, error_2;
+                        return tslib_1.__generator(this, function (_b) {
+                            switch (_b.label) {
+                                case 0:
+                                    collectionId = pendingCollectionIds[index];
+                                    collection = cloneTargetCollections.find(function (item) { return item.id === collectionId; });
+                                    collectionName = (collection === null || collection === void 0 ? void 0 : collection.name) || 'the selected site collection';
+                                    targetSite = resolveSiteForCollection(collectionId);
+                                    if (!targetSite) {
+                                        nextResults.push({ collectionId: collectionId, collectionName: collectionName, status: 'error', message: 'Could not resolve a destination site for that site collection.' });
+                                        return [2 /*return*/, "continue"];
+                                    }
+                                    setCloneStatus("Copying to ".concat(collectionName, " (").concat(nextResults.length + 1, "/").concat(cloneTargetCollectionIds.length, ")\u2026"));
+                                    _b.label = 1;
+                                case 1:
+                                    _b.trys.push([1, 3, , 4]);
+                                    return [4 /*yield*/, props.onCreateSkill({
+                                            siteUrl: targetSite.url,
+                                            skillName: skill.name,
+                                            skillContent: cloneSource.skillContent,
+                                            onProgress: function (message) { return setCloneStatus("".concat(collectionName, ": ").concat(message)); }
+                                        })];
+                                case 2:
+                                    _b.sent();
+                                    nextResults.push({ collectionId: collectionId, collectionName: collectionName, status: 'success' });
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    error_2 = _b.sent();
+                                    if ((0, TenantSharePointDataService_1.isAgentAssetsLibraryNotFoundError)(error_2)) {
+                                        setCloneResults(nextResults);
+                                        setCloneStatus('');
+                                        setIsCloning(false);
+                                        setAgentAssetsPromptSiteUrl(error_2.siteUrl);
+                                        return [2 /*return*/, { value: void 0 }];
+                                    }
+                                    nextResults.push({ collectionId: collectionId, collectionName: collectionName, status: 'error', message: error_2 instanceof Error ? error_2.message : 'Failed to copy the skill.' });
+                                    return [3 /*break*/, 4];
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    };
+                    index = 0;
                     _a.label = 1;
                 case 1:
-                    _a.trys.push([1, 3, 4, 5]);
-                    setCloneStatus('Copying skill…');
-                    return [4 /*yield*/, props.onCreateSkill({
-                            siteUrl: targetSite.url,
-                            skillName: skill.name,
-                            skillContent: cloneSource.skillContent,
-                            onProgress: function (message) { return setCloneStatus(message); }
-                        })];
+                    if (!(index < pendingCollectionIds.length)) return [3 /*break*/, 4];
+                    return [5 /*yield**/, _loop_1(index)];
                 case 2:
-                    _a.sent();
-                    setCloneSource(undefined);
-                    setCloneTargetCollectionId(undefined);
-                    return [3 /*break*/, 5];
+                    state_1 = _a.sent();
+                    if (typeof state_1 === "object")
+                        return [2 /*return*/, state_1.value];
+                    _a.label = 3;
                 case 3:
-                    error_2 = _a.sent();
-                    if ((0, TenantSharePointDataService_1.isAgentAssetsLibraryNotFoundError)(error_2)) {
-                        setAgentAssetsPromptSiteUrl(error_2.siteUrl);
-                        setCloneStatus('');
-                    }
-                    else {
-                        setCloneError(error_2 instanceof Error ? error_2.message : 'Failed to copy the skill.');
-                    }
-                    return [3 /*break*/, 5];
+                    index++;
+                    return [3 /*break*/, 1];
                 case 4:
+                    setCloneResults(nextResults);
+                    setCloneStatus('');
                     setIsCloning(false);
-                    return [7 /*endfinally*/];
-                case 5: return [2 /*return*/];
+                    if (nextResults.every(function (result) { return result.status === 'success'; })) {
+                        setCloneSource(undefined);
+                        setCloneTargetCollectionIds([]);
+                        setCloneResults([]);
+                    }
+                    return [2 /*return*/];
             }
         });
-    }); }, [cloneSource, cloneTargetCollectionId, props, resolveSiteForCollection, skill]);
+    }); }, [cloneResults, cloneSource, cloneTargetCollectionIds, cloneTargetCollections, props, resolveSiteForCollection, skill]);
     var handleCancelActivateFeature = React.useCallback(function () {
         setAgentAssetsPromptSiteUrl(undefined);
         setActivateError('');
@@ -440,12 +505,13 @@ function SkillDetailsPanel(props) {
                         React.createElement(react_components_1.Button, { appearance: "primary", className: styles.deleteConfirmButton, disabled: isDeleting, onClick: function () { void handleConfirmDelete(); } }, isDeleting ? 'Deleting…' : 'Delete skill'))))),
         React.createElement(react_components_1.Dialog, { open: Boolean(cloneSource), onOpenChange: function (_, data) { if (!data.open && !isCloning) {
                 setCloneSource(undefined);
-                setCloneTargetCollectionId(undefined);
+                setCloneTargetCollectionIds([]);
+                setCloneResults([]);
                 setCloneError('');
             } } },
             React.createElement(react_components_1.DialogSurface, null,
                 React.createElement(react_components_1.DialogBody, null,
-                    React.createElement(react_components_1.DialogTitle, null, "Copy skill to another site collection"),
+                    React.createElement(react_components_1.DialogTitle, null, "Copy skill to other site collections"),
                     React.createElement(react_components_1.DialogContent, null,
                         isCloning ? (React.createElement(react_components_1.Spinner, { className: styles.dialogSpinner, label: cloneStatus || 'Copying skill…' })) : (React.createElement(React.Fragment, null,
                             React.createElement(react_components_1.Body1, null,
@@ -453,16 +519,24 @@ function SkillDetailsPanel(props) {
                                 skill.name,
                                 "\u201D SKILL.md content from ",
                                 React.createElement("strong", null, cloneSource === null || cloneSource === void 0 ? void 0 : cloneSource.site.name),
-                                " into a new skill folder in the site collection you choose below."),
-                            cloneTargetCollections.length ? (React.createElement("label", { className: styles.cloneField },
-                                React.createElement(react_components_1.Text, { weight: "semibold" }, "Destination site collection"),
-                                React.createElement("select", { className: styles.select, value: cloneTargetCollectionId || '', onChange: function (event) { return setCloneTargetCollectionId(event.target.value || undefined); } },
-                                    React.createElement("option", { value: "" }, "Select a site collection"),
-                                    cloneTargetCollections.map(function (collection) { return (React.createElement("option", { key: collection.id, value: collection.id }, collection.name)); })))) : (React.createElement(react_components_1.Body1, { className: styles.metaLabel }, "This skill already exists in every discovered site collection.")))),
+                                " into a new skill folder in each site collection you select below."),
+                            cloneTargetCollections.length ? (React.createElement("div", { className: styles.cloneField },
+                                React.createElement("div", { className: styles.cloneTargetHeader },
+                                    React.createElement(react_components_1.Text, { weight: "semibold" }, "Destination site collections"),
+                                    React.createElement(react_components_1.Checkbox, { label: "Select all", checked: cloneTargetCollectionIds.length === cloneTargetCollections.length, onChange: function (_, data) { return handleToggleSelectAllCloneTargets(Boolean(data.checked)); } })),
+                                React.createElement("div", { className: styles.cloneTargetList }, cloneTargetCollections.map(function (collection) { return (React.createElement(react_components_1.Checkbox, { key: collection.id, label: collection.name, checked: cloneTargetCollectionIds.indexOf(collection.id) !== -1, onChange: function (_, data) { return toggleCloneTargetCollection(collection.id, Boolean(data.checked)); } })); })))) : (React.createElement(react_components_1.Body1, { className: styles.metaLabel }, "This skill already exists in every discovered site collection.")),
+                            cloneResults.length ? (React.createElement("div", { className: styles.cloneResultsList, role: "status", "aria-live": "polite" }, cloneResults.map(function (result) { return (React.createElement(react_components_1.Caption1, { key: result.collectionId, className: result.status === 'error' ? styles.cloneResultError : undefined },
+                                React.createElement("span", { "aria-hidden": "true" },
+                                    result.status === 'success' ? '✓' : '✗',
+                                    " "),
+                                result.status === 'success' ? 'Copied' : 'Failed',
+                                " to ",
+                                result.collectionName,
+                                result.message ? ": ".concat(result.message) : '')); }))) : null)),
                         cloneError ? React.createElement(react_components_1.Body1, { className: styles.deleteError }, cloneError) : null),
                     React.createElement(react_components_1.DialogActions, null,
-                        React.createElement(react_components_1.Button, { appearance: "secondary", disabled: isCloning, onClick: function () { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); } }, "Cancel"),
-                        React.createElement(react_components_1.Button, { appearance: "primary", disabled: isCloning || !cloneTargetCollectionId, onClick: function () { void handleConfirmClone(); } }, isCloning ? 'Copying…' : 'Copy skill'))))),
+                        React.createElement(react_components_1.Button, { appearance: "secondary", disabled: isCloning, onClick: function () { setCloneSource(undefined); setCloneTargetCollectionIds([]); setCloneResults([]); setCloneError(''); } }, "Cancel"),
+                        React.createElement(react_components_1.Button, { appearance: "primary", disabled: isCloning || !cloneTargetCollectionIds.length, onClick: function () { void handleConfirmClone(); } }, isCloning ? 'Copying…' : cloneResults.some(function (result) { return result.status === 'error'; }) ? 'Retry failed' : 'Copy skill'))))),
         React.createElement(ActivateAgentAssetsDialog_1.default, { open: Boolean(agentAssetsPromptSiteUrl), siteUrl: agentAssetsPromptSiteUrl, isActivating: isActivatingFeature, error: activateError, onConfirm: function () { void handleConfirmActivateFeature(); }, onCancel: handleCancelActivateFeature }),
         React.createElement("div", { className: styles.root },
             React.createElement("div", { className: styles.section },

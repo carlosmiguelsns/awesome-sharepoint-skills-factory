@@ -21,6 +21,16 @@ var useStyles = (0, react_components_1.makeStyles)({
     }
 });
 var DEFAULT_INLINE_SKILL_LIMIT = 5;
+// SharePoint's Folders/Files REST listing can very briefly lag behind a just-completed
+// folder/file creation, so a single refresh right after createSkillAsync can miss the new
+// skill. Retry the refresh a few times, stopping as soon as the new skill's folder shows up.
+var POST_CREATE_REFRESH_RETRY_DELAYS_MS = [0, 500, 1000, 2000];
+function delay(milliseconds) {
+    return new Promise(function (resolve) { return setTimeout(resolve, milliseconds); });
+}
+function normalizeFolderUrlForComparison(url) {
+    return url.replace(/\/$/, '').toLowerCase();
+}
 function SkillsFactoryApp(props) {
     var _this = this;
     var styles = useStyles();
@@ -104,21 +114,44 @@ function SkillsFactoryApp(props) {
                 case 1:
                     allSkills = _a.sent();
                     setSkills(allSkills);
-                    return [2 /*return*/];
+                    return [2 /*return*/, allSkills];
             }
         });
     }); }, [skillService]);
     var handleCreateSkill = React.useCallback(function (request) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-        var result;
+        var result, normalizedNewFolderUrl, _i, POST_CREATE_REFRESH_RETRY_DELAYS_MS_1, retryDelayMs, refreshedSkills, newSkillIsVisible;
         return tslib_1.__generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, skillService.createSkill(request)];
                 case 1:
                     result = _a.sent();
-                    return [4 /*yield*/, refreshSkills()];
+                    normalizedNewFolderUrl = normalizeFolderUrlForComparison(result.skillFolderUrl);
+                    _i = 0, POST_CREATE_REFRESH_RETRY_DELAYS_MS_1 = POST_CREATE_REFRESH_RETRY_DELAYS_MS;
+                    _a.label = 2;
                 case 2:
+                    if (!(_i < POST_CREATE_REFRESH_RETRY_DELAYS_MS_1.length)) return [3 /*break*/, 7];
+                    retryDelayMs = POST_CREATE_REFRESH_RETRY_DELAYS_MS_1[_i];
+                    if (!retryDelayMs) return [3 /*break*/, 4];
+                    return [4 /*yield*/, delay(retryDelayMs)];
+                case 3:
                     _a.sent();
-                    return [2 /*return*/, result];
+                    _a.label = 4;
+                case 4: return [4 /*yield*/, refreshSkills()];
+                case 5:
+                    refreshedSkills = _a.sent();
+                    newSkillIsVisible = refreshedSkills.some(function (skill) {
+                        return (skill.siteRevisions || []).some(function (revision) {
+                            return Boolean(revision.skillFolderUrl) && normalizeFolderUrlForComparison(revision.skillFolderUrl) === normalizedNewFolderUrl;
+                        });
+                    });
+                    if (newSkillIsVisible) {
+                        return [3 /*break*/, 7];
+                    }
+                    _a.label = 6;
+                case 6:
+                    _i++;
+                    return [3 /*break*/, 2];
+                case 7: return [2 /*return*/, result];
             }
         });
     }); }, [refreshSkills, skillService]);

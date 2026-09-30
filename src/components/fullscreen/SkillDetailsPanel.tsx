@@ -154,14 +154,29 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalXXS
   },
-  select: {
-    minHeight: '32px',
-    borderRadius: tokens.borderRadiusMedium,
+  cloneTargetHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalS
+  },
+  cloneTargetList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
+    maxHeight: '220px',
+    overflowY: 'auto',
     border: `1px solid ${tokens.colorNeutralStroke2}`,
-    backgroundColor: tokens.colorNeutralBackground1,
-    color: tokens.colorNeutralForeground1,
-    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
-    font: 'inherit'
+    borderRadius: tokens.borderRadiusMedium,
+    padding: tokens.spacingVerticalS
+  },
+  cloneResultsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS
+  },
+  cloneResultError: {
+    color: tokens.colorPaletteRedForeground1
   }
 });
 
@@ -206,6 +221,13 @@ interface ICloneSource {
   skillContent: string;
 }
 
+interface ICloneTargetResult {
+  collectionId: string;
+  collectionName: string;
+  status: 'success' | 'error';
+  message?: string;
+}
+
 export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React.ReactElement {
   const styles = useStyles();
   const skill: Skill | undefined = props.skill;
@@ -218,7 +240,8 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
   const [isDeleting, setIsDeleting] = React.useState<boolean>(false);
   const [deleteError, setDeleteError] = React.useState<string>('');
   const [cloneSource, setCloneSource] = React.useState<ICloneSource | undefined>(undefined);
-  const [cloneTargetCollectionId, setCloneTargetCollectionId] = React.useState<string | undefined>(undefined);
+  const [cloneTargetCollectionIds, setCloneTargetCollectionIds] = React.useState<string[]>([]);
+  const [cloneResults, setCloneResults] = React.useState<ICloneTargetResult[]>([]);
   const [isCloning, setIsCloning] = React.useState<boolean>(false);
   const [cloneStatus, setCloneStatus] = React.useState<string>('');
   const [cloneError, setCloneError] = React.useState<string>('');
@@ -235,7 +258,8 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
     setDeleteTarget(undefined);
     setDeleteError('');
     setCloneSource(undefined);
-    setCloneTargetCollectionId(undefined);
+    setCloneTargetCollectionIds([]);
+    setCloneResults([]);
     setCloneError('');
     setAgentAssetsPromptSiteUrl(undefined);
     setActivateError('');
@@ -304,40 +328,86 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
     [props.siteCollections, props.sites, skill]
   );
 
+  const toggleCloneTargetCollection = React.useCallback((collectionId: string, checked: boolean): void => {
+    setCloneTargetCollectionIds((current: string[]) => {
+      if (checked) {
+        return current.indexOf(collectionId) !== -1 ? current : [...current, collectionId];
+      }
+
+      return current.filter((id: string) => id !== collectionId);
+    });
+  }, []);
+
+  const handleToggleSelectAllCloneTargets = React.useCallback(
+    (checked: boolean): void => {
+      setCloneTargetCollectionIds(checked ? cloneTargetCollections.map((collection: SiteCollection) => collection.id) : []);
+    },
+    [cloneTargetCollections]
+  );
+
   const handleConfirmClone = React.useCallback(async (): Promise<void> => {
-    if (!cloneSource || !cloneTargetCollectionId || !skill) {
+    if (!cloneSource || !skill || !cloneTargetCollectionIds.length) {
       return;
     }
 
-    const targetSite: SharePointSite | undefined = resolveSiteForCollection(cloneTargetCollectionId);
-    if (!targetSite) {
-      setCloneError('Could not resolve a destination site for that site collection.');
+    // Only successes are considered "done" — a target that errored (or never got attempted
+    // because an earlier target paused the run for Agent Assets activation) is retried.
+    const successfulIds: Set<string> = new Set(cloneResults.filter((result: ICloneTargetResult) => result.status === 'success').map((result: ICloneTargetResult) => result.collectionId));
+    const pendingCollectionIds: string[] = cloneTargetCollectionIds.filter((id: string) => !successfulIds.has(id));
+
+    if (!pendingCollectionIds.length) {
       return;
     }
 
     setIsCloning(true);
     setCloneError('');
-    try {
-      setCloneStatus('Copying skill…');
-      await props.onCreateSkill({
-        siteUrl: targetSite.url,
-        skillName: skill.name,
-        skillContent: cloneSource.skillContent,
-        onProgress: (message: string) => setCloneStatus(message)
-      });
-      setCloneSource(undefined);
-      setCloneTargetCollectionId(undefined);
-    } catch (error: unknown) {
-      if (isAgentAssetsLibraryNotFoundError(error)) {
-        setAgentAssetsPromptSiteUrl(error.siteUrl);
-        setCloneStatus('');
-      } else {
-        setCloneError(error instanceof Error ? error.message : 'Failed to copy the skill.');
+
+    const nextResults: ICloneTargetResult[] = cloneResults.filter((result: ICloneTargetResult) => successfulIds.has(result.collectionId));
+
+    for (let index: number = 0; index < pendingCollectionIds.length; index++) {
+      const collectionId: string = pendingCollectionIds[index];
+      const collection: SiteCollection | undefined = cloneTargetCollections.find((item: SiteCollection) => item.id === collectionId);
+      const collectionName: string = collection?.name || 'the selected site collection';
+      const targetSite: SharePointSite | undefined = resolveSiteForCollection(collectionId);
+
+      if (!targetSite) {
+        nextResults.push({ collectionId, collectionName, status: 'error', message: 'Could not resolve a destination site for that site collection.' });
+        continue;
       }
-    } finally {
-      setIsCloning(false);
+
+      setCloneStatus(`Copying to ${collectionName} (${nextResults.length + 1}/${cloneTargetCollectionIds.length})…`);
+
+      try {
+        await props.onCreateSkill({
+          siteUrl: targetSite.url,
+          skillName: skill.name,
+          skillContent: cloneSource.skillContent,
+          onProgress: (message: string) => setCloneStatus(`${collectionName}: ${message}`)
+        });
+        nextResults.push({ collectionId, collectionName, status: 'success' });
+      } catch (error: unknown) {
+        if (isAgentAssetsLibraryNotFoundError(error)) {
+          setCloneResults(nextResults);
+          setCloneStatus('');
+          setIsCloning(false);
+          setAgentAssetsPromptSiteUrl(error.siteUrl);
+          return;
+        }
+
+        nextResults.push({ collectionId, collectionName, status: 'error', message: error instanceof Error ? error.message : 'Failed to copy the skill.' });
+      }
     }
-  }, [cloneSource, cloneTargetCollectionId, props, resolveSiteForCollection, skill]);
+
+    setCloneResults(nextResults);
+    setCloneStatus('');
+    setIsCloning(false);
+
+    if (nextResults.every((result: ICloneTargetResult) => result.status === 'success')) {
+      setCloneSource(undefined);
+      setCloneTargetCollectionIds([]);
+      setCloneResults([]);
+    }
+  }, [cloneResults, cloneSource, cloneTargetCollectionIds, cloneTargetCollections, props, resolveSiteForCollection, skill]);
 
   const handleCancelActivateFeature = React.useCallback((): void => {
     setAgentAssetsPromptSiteUrl(undefined);
@@ -575,47 +645,63 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
         </DialogSurface>
       </Dialog>
 
-      <Dialog open={Boolean(cloneSource)} onOpenChange={(_, data) => { if (!data.open && !isCloning) { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); } }}>
+      <Dialog open={Boolean(cloneSource)} onOpenChange={(_, data) => { if (!data.open && !isCloning) { setCloneSource(undefined); setCloneTargetCollectionIds([]); setCloneResults([]); setCloneError(''); } }}>
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>Copy skill to another site collection</DialogTitle>
+            <DialogTitle>Copy skill to other site collections</DialogTitle>
             <DialogContent>
               {isCloning ? (
                 <Spinner className={styles.dialogSpinner} label={cloneStatus || 'Copying skill…'} />
               ) : (
                 <>
                   <Body1>
-                    Copies the “{skill.name}” SKILL.md content from <strong>{cloneSource?.site.name}</strong> into a new skill folder in the site collection you choose below.
+                    Copies the “{skill.name}” SKILL.md content from <strong>{cloneSource?.site.name}</strong> into a new skill folder in each site collection you select below.
                   </Body1>
                   {cloneTargetCollections.length ? (
-                    <label className={styles.cloneField}>
-                      <Text weight="semibold">Destination site collection</Text>
-                      <select
-                        className={styles.select}
-                        value={cloneTargetCollectionId || ''}
-                        onChange={(event) => setCloneTargetCollectionId(event.target.value || undefined)}
-                      >
-                        <option value="">Select a site collection</option>
+                    <div className={styles.cloneField}>
+                      <div className={styles.cloneTargetHeader}>
+                        <Text weight="semibold">Destination site collections</Text>
+                        <Checkbox
+                          label="Select all"
+                          checked={cloneTargetCollectionIds.length === cloneTargetCollections.length}
+                          onChange={(_, data) => handleToggleSelectAllCloneTargets(Boolean(data.checked))}
+                        />
+                      </div>
+                      <div className={styles.cloneTargetList}>
                         {cloneTargetCollections.map((collection: SiteCollection) => (
-                          <option key={collection.id} value={collection.id}>
-                            {collection.name}
-                          </option>
+                          <Checkbox
+                            key={collection.id}
+                            label={collection.name}
+                            checked={cloneTargetCollectionIds.indexOf(collection.id) !== -1}
+                            onChange={(_, data) => toggleCloneTargetCollection(collection.id, Boolean(data.checked))}
+                          />
                         ))}
-                      </select>
-                    </label>
+                      </div>
+                    </div>
                   ) : (
                     <Body1 className={styles.metaLabel}>This skill already exists in every discovered site collection.</Body1>
                   )}
+                  {cloneResults.length ? (
+                    <div className={styles.cloneResultsList} role="status" aria-live="polite">
+                      {cloneResults.map((result: ICloneTargetResult) => (
+                        <Caption1 key={result.collectionId} className={result.status === 'error' ? styles.cloneResultError : undefined}>
+                          <span aria-hidden="true">{result.status === 'success' ? '✓' : '✗'} </span>
+                          {result.status === 'success' ? 'Copied' : 'Failed'} to {result.collectionName}
+                          {result.message ? `: ${result.message}` : ''}
+                        </Caption1>
+                      ))}
+                    </div>
+                  ) : null}
                 </>
               )}
               {cloneError ? <Body1 className={styles.deleteError}>{cloneError}</Body1> : null}
             </DialogContent>
             <DialogActions>
-              <Button appearance="secondary" disabled={isCloning} onClick={() => { setCloneSource(undefined); setCloneTargetCollectionId(undefined); setCloneError(''); }}>
+              <Button appearance="secondary" disabled={isCloning} onClick={() => { setCloneSource(undefined); setCloneTargetCollectionIds([]); setCloneResults([]); setCloneError(''); }}>
                 Cancel
               </Button>
-              <Button appearance="primary" disabled={isCloning || !cloneTargetCollectionId} onClick={() => { void handleConfirmClone(); }}>
-                {isCloning ? 'Copying…' : 'Copy skill'}
+              <Button appearance="primary" disabled={isCloning || !cloneTargetCollectionIds.length} onClick={() => { void handleConfirmClone(); }}>
+                {isCloning ? 'Copying…' : cloneResults.some((result: ICloneTargetResult) => result.status === 'error') ? 'Retry failed' : 'Copy skill'}
               </Button>
             </DialogActions>
           </DialogBody>

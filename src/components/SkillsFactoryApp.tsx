@@ -13,7 +13,7 @@ import {
 import type { ICopilotComponentHostContext } from '@microsoft/sp-copilot-component';
 import type { MSGraphClientFactory, SPHttpClient } from '@microsoft/sp-http';
 
-import type { SharePointSite, SiteCollection, Skill } from '../models';
+import type { SharePointSite, SiteCollection, Skill, SkillSiteRevision } from '../models';
 import { SkillService } from '../services/SkillService';
 import { SiteService } from '../services/SiteService';
 import InlineSkillsView, { type InlineViewMode } from './inline/InlineSkillsView';
@@ -49,6 +49,19 @@ export interface ISkillsFactoryAppProps {
 }
 
 const DEFAULT_INLINE_SKILL_LIMIT: number = 5;
+
+// SharePoint's Folders/Files REST listing can very briefly lag behind a just-completed
+// folder/file creation, so a single refresh right after createSkillAsync can miss the new
+// skill. Retry the refresh a few times, stopping as soon as the new skill's folder shows up.
+const POST_CREATE_REFRESH_RETRY_DELAYS_MS: number[] = [0, 500, 1000, 2000];
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function normalizeFolderUrlForComparison(url: string): string {
+  return url.replace(/\/$/, '').toLowerCase();
+}
 
 export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.ReactElement {
   const styles = useStyles();
@@ -138,15 +151,35 @@ export default function SkillsFactoryApp(props: ISkillsFactoryAppProps): React.R
     };
   }, [siteService, skillService]);
 
-  const refreshSkills = React.useCallback(async (): Promise<void> => {
+  const refreshSkills = React.useCallback(async (): Promise<Skill[]> => {
     const allSkills: Skill[] = await skillService.getSkills({ ownedOnly: false });
     setSkills(allSkills);
+    return allSkills;
   }, [skillService]);
 
   const handleCreateSkill = React.useCallback(
     async (request: ICreateSkillRequest): Promise<ICreateSkillResult> => {
       const result: ICreateSkillResult = await skillService.createSkill(request);
-      await refreshSkills();
+      const normalizedNewFolderUrl: string = normalizeFolderUrlForComparison(result.skillFolderUrl);
+
+      for (const retryDelayMs of POST_CREATE_REFRESH_RETRY_DELAYS_MS) {
+        if (retryDelayMs) {
+          await delay(retryDelayMs);
+        }
+
+        const refreshedSkills: Skill[] = await refreshSkills();
+        const newSkillIsVisible: boolean = refreshedSkills.some((skill: Skill) =>
+          (skill.siteRevisions || []).some(
+            (revision: SkillSiteRevision) =>
+              Boolean(revision.skillFolderUrl) && normalizeFolderUrlForComparison(revision.skillFolderUrl as string) === normalizedNewFolderUrl
+          )
+        );
+
+        if (newSkillIsVisible) {
+          break;
+        }
+      }
+
       return result;
     },
     [refreshSkills, skillService]
