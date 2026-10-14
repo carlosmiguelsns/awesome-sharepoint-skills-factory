@@ -64,7 +64,6 @@ export default function InlineSkillsView(props: IInlineSkillsViewProps): React.R
 
   const prompts: ISuggestedPrompt[] = [
     { key: 'top-5', label: 'Show my top 5 skills', isActive: props.mode === 'list' && props.skillLimit === 5, onClick: () => props.onShowTopSkills(5) },
-    { key: 'top-3', label: 'Show my top 3 skills', isActive: props.mode === 'list' && props.skillLimit === 3, onClick: () => props.onShowTopSkills(3) },
     { key: 'all', label: 'Show all my skills', isActive: props.mode === 'list' && props.skillLimit === 'all', onClick: props.onShowAllSkills },
     { key: 'create', label: 'Create a new skill', isActive: props.mode === 'create', onClick: props.onStartCreateSkill }
   ];

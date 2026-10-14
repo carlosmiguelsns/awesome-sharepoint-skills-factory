@@ -53,12 +53,17 @@ const useStyles = makeStyles({
     visibility: 'hidden'
   },
   skillBlade: {
-    position: 'absolute',
+    // 'fixed' (not 'absolute') so the blade's height is always bound to the viewport rather
+    // than to usageShell's content-driven height, which can be shorter than the viewport and
+    // would otherwise let tall content (many sites) overflow the page without ever showing
+    // a scrollbar.
+    position: 'fixed',
     top: 0,
     right: 0,
     bottom: 0,
     width: 'clamp(760px, 56%, 100%)',
     maxWidth: '100%',
+    maxHeight: '100vh',
     zIndex: 5,
     display: 'flex',
     flexDirection: 'column',
