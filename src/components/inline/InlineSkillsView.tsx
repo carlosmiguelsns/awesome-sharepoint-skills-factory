@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { Body1, Text, makeStyles, tokens } from '@fluentui/react-components';
+import { Sparkle24Regular } from '@fluentui/react-icons';
 
 import type { SharePointSite, Skill } from '../../models';
 import type { ICreateSkillRequest, ICreateSkillResult } from '../../services/TenantSharePointDataService';
@@ -16,6 +17,22 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
     padding: tokens.spacingHorizontalM
+  },
+  headerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS
+  },
+  headerIconTile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground1,
+    flexShrink: 0
   },
   headerText: {
     display: 'flex',
@@ -70,11 +87,16 @@ export default function InlineSkillsView(props: IInlineSkillsViewProps): React.R
 
   return (
     <div className={styles.root}>
-      <div className={styles.headerText}>
-        <Text size={500} weight="semibold">My Skills</Text>
-        <Body1 className={styles.helper}>
-          {props.mode === 'create' ? 'Create a new skill folder and SKILL.md in a selected site.' : describeVisibleSkills(props.skills.length, props.totalMySkillsCount, props.skillLimit)}
-        </Body1>
+      <div className={styles.headerRow}>
+        <span className={styles.headerIconTile} aria-hidden="true">
+          <Sparkle24Regular />
+        </span>
+        <div className={styles.headerText}>
+          <Text size={500} weight="semibold">My Skills</Text>
+          <Body1 className={styles.helper}>
+            {props.mode === 'create' ? 'Create a new skill folder and SKILL.md in a selected site.' : describeVisibleSkills(props.skills.length, props.totalMySkillsCount, props.skillLimit)}
+          </Body1>
+        </div>
       </div>
 
       <SuggestedPromptPills prompts={prompts} />

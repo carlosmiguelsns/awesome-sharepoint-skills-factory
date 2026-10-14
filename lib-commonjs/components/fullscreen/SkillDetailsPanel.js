@@ -17,6 +17,17 @@ var useStyles = (0, react_components_1.makeStyles)({
     card: {
         boxShadow: 'none'
     },
+    headerIconTile: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '32px',
+        height: '32px',
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        backgroundColor: react_components_1.tokens.colorBrandBackground2,
+        color: react_components_1.tokens.colorBrandForeground1,
+        flexShrink: 0
+    },
     root: {
         display: 'flex',
         flexDirection: 'column',
@@ -65,6 +76,14 @@ var useStyles = (0, react_components_1.makeStyles)({
     },
     sitesGrid: {
         width: '100%'
+    },
+    sitesGridHeader: {
+        backgroundColor: react_components_1.tokens.colorNeutralBackground2
+    },
+    sitesGridRow: {
+        ':hover': {
+            backgroundColor: react_components_1.tokens.colorSubtleBackgroundHover
+        }
     },
     sitesEmpty: {
         color: react_components_1.tokens.colorNeutralForeground3,
@@ -473,7 +492,8 @@ function SkillDetailsPanel(props) {
     var compareSiteA = skillSites.find(function (site) { return site.id === compareSiteIds[0]; });
     var compareSiteB = skillSites.find(function (site) { return site.id === compareSiteIds[1]; });
     return (React.createElement(react_components_1.Card, { className: styles.card },
-        React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, skill.name), action: props.onClose ? React.createElement(react_components_1.Button, { appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close skill details", onClick: props.onClose }) : undefined }),
+        React.createElement(react_components_1.CardHeader, { image: React.createElement("span", { className: styles.headerIconTile, "aria-hidden": "true" },
+                React.createElement(react_icons_1.Sparkle24Regular, null)), header: React.createElement(react_components_1.Text, { size: 400, weight: "semibold" }, skill.name), action: props.onClose ? React.createElement(react_components_1.Button, { appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close skill details", onClick: props.onClose }) : undefined }),
         React.createElement(react_components_1.Dialog, { open: previewSiteId !== undefined, onOpenChange: function (_, data) { return setPreviewSiteId(data.open ? previewSiteId : undefined); } },
             React.createElement(react_components_1.DialogSurface, { className: styles.previewDialogSurface },
                 React.createElement(react_components_1.DialogBody, null,
@@ -541,10 +561,9 @@ function SkillDetailsPanel(props) {
         React.createElement("div", { className: styles.root },
             React.createElement("div", { className: styles.section },
                 React.createElement("div", { className: styles.sitesSectionHeader },
-                    React.createElement(react_components_1.Caption1, null,
-                        "Sites where this skill exists (",
-                        skillSites.length,
-                        ")"),
+                    React.createElement(react_components_1.Text, { weight: "semibold" },
+                        "Sites where this skill exists ",
+                        React.createElement(react_components_1.Badge, { appearance: "tint", color: "informative" }, skillSites.length)),
                     skillSites.length > 1 ? (React.createElement(react_components_1.Button, { appearance: "secondary", size: "small", disabled: !compareSiteA || !compareSiteB, onClick: function () { return setIsCompareOpen(true); } },
                         "Compare selected sites",
                         compareSiteIds.length ? " (".concat(compareSiteIds.length, "/2)") : '')) : null),
@@ -556,7 +575,7 @@ function SkillDetailsPanel(props) {
                         " of ",
                         filteredSkillSites.length))) : null,
                 React.createElement(react_components_1.Card, { className: styles.sitesGridCard }, filteredSkillSites.length ? (React.createElement(react_components_1.DataGrid, { className: styles.sitesGrid, items: pagedSkillSites, columns: columns, getRowId: function (site) { return site.id; } },
-                    React.createElement(react_components_1.DataGridHeader, null,
+                    React.createElement(react_components_1.DataGridHeader, { className: styles.sitesGridHeader },
                         React.createElement(react_components_1.DataGridRow, null, function (_a) {
                             var renderHeaderCell = _a.renderHeaderCell, columnId = _a.columnId;
                             return (React.createElement(react_components_1.DataGridHeaderCell, { "aria-label": columnId === 'compare' ? 'Compare' : columnId === 'actions' ? 'Actions' : undefined, style: columnId === 'compare' || columnId === 'actions'
@@ -565,7 +584,7 @@ function SkillDetailsPanel(props) {
                         })),
                     React.createElement(react_components_1.DataGridBody, null, function (_a) {
                         var item = _a.item, rowId = _a.rowId;
-                        return (React.createElement(react_components_1.DataGridRow, { key: rowId }, function (_a) {
+                        return (React.createElement(react_components_1.DataGridRow, { key: rowId, className: styles.sitesGridRow }, function (_a) {
                             var renderCell = _a.renderCell, columnId = _a.columnId;
                             return (React.createElement(react_components_1.DataGridCell, { style: columnId === 'compare' || columnId === 'actions'
                                     ? { width: columnWidths[columnId], padding: 0, justifyContent: 'center' }

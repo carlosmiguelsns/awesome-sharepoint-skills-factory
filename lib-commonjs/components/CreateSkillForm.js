@@ -64,12 +64,17 @@ var useStyles = (0, react_components_1.makeStyles)({
         width: '100%',
         minWidth: 0,
         borderRadius: react_components_1.tokens.borderRadiusMedium,
+        border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
         overflow: 'hidden'
     },
     preview: {
         display: 'flex',
         flexDirection: 'column',
-        gap: react_components_1.tokens.spacingVerticalXXS
+        gap: react_components_1.tokens.spacingVerticalXXS,
+        padding: react_components_1.tokens.spacingVerticalS,
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        backgroundColor: react_components_1.tokens.colorNeutralBackground2,
+        border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2)
     },
     statusText: {
         color: react_components_1.tokens.colorNeutralForeground3

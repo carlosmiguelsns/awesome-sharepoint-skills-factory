@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Badge, Body1, Button, Caption1, Text, makeStyles, tokens } from '@fluentui/react-components';
-import { ChevronDown24Regular, ChevronRight24Regular, ChevronUp24Regular, ChevronUpDown24Regular } from '@fluentui/react-icons';
+import { CheckmarkCircle16Regular, ChevronDown24Regular, ChevronRight24Regular, ChevronUp24Regular, ChevronUpDown24Regular, SubtractCircle16Regular } from '@fluentui/react-icons';
 
 import type { SharePointSite, Skill } from '../../models';
 
@@ -14,15 +14,19 @@ const useStyles = makeStyles({
   headerCell: {
     textAlign: 'left',
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
+    backgroundColor: tokens.colorNeutralBackground2,
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     whiteSpace: 'nowrap'
   },
   row: {
     cursor: 'pointer',
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    ':hover': {
+      backgroundColor: tokens.colorSubtleBackgroundHover
+    }
   },
   selectedRow: {
-    backgroundColor: tokens.colorNeutralBackground3
+    backgroundColor: tokens.colorSubtleBackgroundSelected
   },
   cell: {
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
@@ -36,12 +40,6 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalXXS
-  },
-  statusHas: {
-    color: tokens.colorPaletteGreenForeground1
-  },
-  statusNone: {
-    color: tokens.colorNeutralForeground3
   },
   detailsRow: {
     backgroundColor: tokens.colorNeutralBackground2
@@ -172,9 +170,13 @@ export default function SitesTable(props: ISitesTableProps): React.ReactElement 
                   </Badge>
                 </td>
                 <td className={styles.cell}>
-                  <Text weight="semibold" className={hasSkills ? styles.statusHas : styles.statusNone}>
+                  <Badge
+                    appearance="tint"
+                    color={hasSkills ? 'success' : 'informative'}
+                    icon={hasSkills ? <CheckmarkCircle16Regular /> : <SubtractCircle16Regular />}
+                  >
                     {hasSkills ? 'Has skills' : 'No skills'}
-                  </Text>
+                  </Badge>
                 </td>
                 <td className={`${styles.cell} ${styles.actionsCell}`}>
                   <Button
@@ -203,7 +205,7 @@ export default function SitesTable(props: ISitesTableProps): React.ReactElement 
                     {siteSkills.length ? (
                       <div className={styles.skillsWrap}>
                         {siteSkills.map((skill: Skill) => (
-                          <Badge key={skill.id} appearance="filled">
+                          <Badge key={skill.id} appearance="tint" color="brand">
                             {skill.name}
                           </Badge>
                         ))}

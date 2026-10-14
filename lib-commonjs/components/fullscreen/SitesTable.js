@@ -14,15 +14,19 @@ var useStyles = (0, react_components_1.makeStyles)({
     headerCell: {
         textAlign: 'left',
         padding: "".concat(react_components_1.tokens.spacingVerticalXS, " ").concat(react_components_1.tokens.spacingHorizontalS),
+        backgroundColor: react_components_1.tokens.colorNeutralBackground2,
         borderBottom: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
         whiteSpace: 'nowrap'
     },
     row: {
         cursor: 'pointer',
-        borderBottom: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2)
+        borderBottom: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
+        ':hover': {
+            backgroundColor: react_components_1.tokens.colorSubtleBackgroundHover
+        }
     },
     selectedRow: {
-        backgroundColor: react_components_1.tokens.colorNeutralBackground3
+        backgroundColor: react_components_1.tokens.colorSubtleBackgroundSelected
     },
     cell: {
         padding: "".concat(react_components_1.tokens.spacingVerticalS, " ").concat(react_components_1.tokens.spacingHorizontalS),
@@ -36,12 +40,6 @@ var useStyles = (0, react_components_1.makeStyles)({
         display: 'flex',
         flexDirection: 'column',
         gap: react_components_1.tokens.spacingVerticalXXS
-    },
-    statusHas: {
-        color: react_components_1.tokens.colorPaletteGreenForeground1
-    },
-    statusNone: {
-        color: react_components_1.tokens.colorNeutralForeground3
     },
     detailsRow: {
         backgroundColor: react_components_1.tokens.colorNeutralBackground2
@@ -127,7 +125,7 @@ function SitesTable(props) {
                     React.createElement("td", { className: styles.cell, style: { textAlign: 'right' } },
                         React.createElement(react_components_1.Badge, { appearance: "outline", color: "informative" }, skillCount)),
                     React.createElement("td", { className: styles.cell },
-                        React.createElement(react_components_1.Text, { weight: "semibold", className: hasSkills ? styles.statusHas : styles.statusNone }, hasSkills ? 'Has skills' : 'No skills')),
+                        React.createElement(react_components_1.Badge, { appearance: "tint", color: hasSkills ? 'success' : 'informative', icon: hasSkills ? React.createElement(react_icons_1.CheckmarkCircle16Regular, null) : React.createElement(react_icons_1.SubtractCircle16Regular, null) }, hasSkills ? 'Has skills' : 'No skills')),
                     React.createElement("td", { className: "".concat(styles.cell, " ").concat(styles.actionsCell) },
                         React.createElement(react_components_1.Button, { appearance: "secondary", size: "small", icon: isExpanded ? React.createElement(react_icons_1.ChevronDown24Regular, null) : React.createElement(react_icons_1.ChevronRight24Regular, null), iconPosition: "after", onClick: function (event) {
                                 event.stopPropagation();
@@ -142,7 +140,7 @@ function SitesTable(props) {
                                 siteSkills.length,
                                 " matching skill",
                                 siteSkills.length === 1 ? '' : 's')),
-                        siteSkills.length ? (React.createElement("div", { className: styles.skillsWrap }, siteSkills.map(function (skill) { return (React.createElement(react_components_1.Badge, { key: skill.id, appearance: "filled" }, skill.name)); }))) : (React.createElement(react_components_1.Body1, { className: styles.muted }, "No skills found for this site."))))) : null));
+                        siteSkills.length ? (React.createElement("div", { className: styles.skillsWrap }, siteSkills.map(function (skill) { return (React.createElement(react_components_1.Badge, { key: skill.id, appearance: "tint", color: "brand" }, skill.name)); }))) : (React.createElement(react_components_1.Body1, { className: styles.muted }, "No skills found for this site."))))) : null));
         }))));
 }
 //# sourceMappingURL=SitesTable.js.map

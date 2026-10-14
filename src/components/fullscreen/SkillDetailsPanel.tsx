@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import {
+  Badge,
   Body1,
   Button,
   Card,
@@ -29,7 +30,7 @@ import {
   tokens,
   type TableColumnDefinition
 } from '@fluentui/react-components';
-import { Delete24Regular, Dismiss24Regular, DocumentCopy24Regular, Search24Regular } from '@fluentui/react-icons';
+import { Delete24Regular, Dismiss24Regular, DocumentCopy24Regular, Search24Regular, Sparkle24Regular } from '@fluentui/react-icons';
 import { Viewer } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
@@ -45,6 +46,17 @@ const SITES_PAGE_SIZE: number = 8;
 const useStyles = makeStyles({
   card: {
     boxShadow: 'none'
+  },
+  headerIconTile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground1,
+    flexShrink: 0
   },
   root: {
     display: 'flex',
@@ -94,6 +106,14 @@ const useStyles = makeStyles({
   },
   sitesGrid: {
     width: '100%'
+  },
+  sitesGridHeader: {
+    backgroundColor: tokens.colorNeutralBackground2
+  },
+  sitesGridRow: {
+    ':hover': {
+      backgroundColor: tokens.colorSubtleBackgroundHover
+    }
   },
   sitesEmpty: {
     color: tokens.colorNeutralForeground3,
@@ -588,7 +608,8 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
   return (
     <Card className={styles.card}>
       <CardHeader
-        header={<Text weight="semibold">{skill.name}</Text>}
+        image={<span className={styles.headerIconTile} aria-hidden="true"><Sparkle24Regular /></span>}
+        header={<Text size={400} weight="semibold">{skill.name}</Text>}
         action={props.onClose ? <Button appearance="subtle" icon={<Dismiss24Regular />} aria-label="Close skill details" onClick={props.onClose} /> : undefined}
       />
 
@@ -720,9 +741,9 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
       <div className={styles.root}>
         <div className={styles.section}>
           <div className={styles.sitesSectionHeader}>
-            <Caption1>
-              Sites where this skill exists ({skillSites.length})
-            </Caption1>
+            <Text weight="semibold">
+              Sites where this skill exists <Badge appearance="tint" color="informative">{skillSites.length}</Badge>
+            </Text>
             {skillSites.length > 1 ? (
               <Button appearance="secondary" size="small" disabled={!compareSiteA || !compareSiteB} onClick={() => setIsCompareOpen(true)}>
                 Compare selected sites{compareSiteIds.length ? ` (${compareSiteIds.length}/2)` : ''}
@@ -748,7 +769,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
           <Card className={styles.sitesGridCard}>
             {filteredSkillSites.length ? (
               <DataGrid className={styles.sitesGrid} items={pagedSkillSites} columns={columns} getRowId={(site: SharePointSite) => site.id}>
-                <DataGridHeader>
+                <DataGridHeader className={styles.sitesGridHeader}>
                   <DataGridRow>
                     {({ renderHeaderCell, columnId }) => (
                       <DataGridHeaderCell
@@ -766,7 +787,7 @@ export default function SkillDetailsPanel(props: ISkillDetailsPanelProps): React
                 </DataGridHeader>
                 <DataGridBody<SharePointSite>>
                   {({ item, rowId }) => (
-                    <DataGridRow<SharePointSite> key={rowId}>
+                    <DataGridRow<SharePointSite> key={rowId} className={styles.sitesGridRow}>
                       {({ renderCell, columnId }) => (
                         <DataGridCell
                           style={

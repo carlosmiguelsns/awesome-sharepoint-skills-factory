@@ -13,10 +13,20 @@ const useStyles = makeStyles({
   },
   card: {},
   cardClickable: {
-    cursor: 'pointer'
+    cursor: 'pointer',
+    transition: 'box-shadow 100ms ease, transform 100ms ease',
+    ':hover': {
+      boxShadow: tokens.shadow4,
+      transform: 'translateY(-1px)'
+    },
+    ':focus-visible': {
+      outline: `2px solid ${tokens.colorStrokeFocus2}`,
+      outlineOffset: '2px'
+    }
   },
   cardSelected: {
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorSubtleBackgroundSelected,
+    borderLeft: `3px solid ${tokens.colorBrandStroke1}`,
     position: 'relative'
   },
   selectedIcon: {

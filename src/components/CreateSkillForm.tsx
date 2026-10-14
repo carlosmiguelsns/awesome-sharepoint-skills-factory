@@ -64,12 +64,17 @@ const useStyles = makeStyles({
     width: '100%',
     minWidth: 0,
     borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
     overflow: 'hidden'
   },
   preview: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalXXS
+    gap: tokens.spacingVerticalXXS,
+    padding: tokens.spacingVerticalS,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke2}`
   },
   statusText: {
     color: tokens.colorNeutralForeground3

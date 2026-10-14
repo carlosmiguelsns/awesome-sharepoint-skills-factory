@@ -13,10 +13,20 @@ var useStyles = (0, react_components_1.makeStyles)({
     },
     card: {},
     cardClickable: {
-        cursor: 'pointer'
+        cursor: 'pointer',
+        transition: 'box-shadow 100ms ease, transform 100ms ease',
+        ':hover': {
+            boxShadow: react_components_1.tokens.shadow4,
+            transform: 'translateY(-1px)'
+        },
+        ':focus-visible': {
+            outline: "2px solid ".concat(react_components_1.tokens.colorStrokeFocus2),
+            outlineOffset: '2px'
+        }
     },
     cardSelected: {
-        backgroundColor: react_components_1.tokens.colorNeutralBackground3,
+        backgroundColor: react_components_1.tokens.colorSubtleBackgroundSelected,
+        borderLeft: "3px solid ".concat(react_components_1.tokens.colorBrandStroke1),
         position: 'relative'
     },
     selectedIcon: {

@@ -23,13 +23,18 @@ import {
 } from '@fluentui/react-components';
 import {
   Add24Regular,
+  ArrowTrending24Regular,
+  CheckmarkCircle24Regular,
   ChevronDown16Regular,
   ChevronDown24Regular,
   ChevronRight24Regular,
   ChevronUp16Regular,
   Dismiss12Regular,
   Dismiss24Regular,
-  Settings24Regular
+  Globe24Regular,
+  Settings24Regular,
+  Sparkle24Regular,
+  Warning24Regular
 } from '@fluentui/react-icons';
 import type { ICopilotComponentHostContext } from '@microsoft/sp-copilot-component';
 
@@ -42,6 +47,20 @@ import SkillsTable from './SkillsTable';
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalM, padding: tokens.spacingHorizontalM },
   header: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
+  headerRow: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM },
+  headerIconTile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '40px',
+    height: '40px',
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground1,
+    flexShrink: 0
+  },
+  headerText: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS },
+  headerSubtitle: { color: tokens.colorNeutralForeground3 },
   toolbar: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'center', justifyContent: 'space-between' },
   toolbarActions: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'center' },
   searchBar: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS, alignItems: 'end' },
@@ -138,11 +157,34 @@ const useStyles = makeStyles({
   filterSummary: { display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalXS, alignItems: 'center' },
   compactStatCard: { display: 'inline-flex', flexDirection: 'column', gap: tokens.spacingVerticalXXS, minHeight: '92px', width: 'fit-content', minWidth: '180px', padding: tokens.spacingVerticalM },
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: tokens.spacingHorizontalM },
-  kpiCard: { minHeight: '104px' },
+  kpiCard: { minHeight: '104px', boxShadow: tokens.shadow2 },
+  kpiHeaderRow: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalXXS },
+  kpiIconTile: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    borderRadius: tokens.borderRadiusCircular,
+    flexShrink: 0
+  },
   chartGrid: { display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: tokens.spacingHorizontalS, alignItems: 'stretch', overflowX: 'auto' },
   chartCard: { flex: '1 1 0', minWidth: '340px', minHeight: '100%', overflowY: 'visible' },
-  chartList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
-  chartItem: { border: 'none', background: 'transparent', padding: 0, textAlign: 'left', width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
+  chartList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
+  chartItem: {
+    border: 'none',
+    borderRadius: tokens.borderRadiusMedium,
+    background: 'transparent',
+    padding: tokens.spacingVerticalXS,
+    textAlign: 'left',
+    width: '100%',
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+    ':hover': { backgroundColor: tokens.colorSubtleBackgroundHover },
+    ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' }
+  },
   chartItemHeader: { display: 'flex', justifyContent: 'space-between', gap: tokens.spacingHorizontalS, alignItems: 'baseline' },
   chartTrack: { height: '10px', borderRadius: tokens.borderRadiusCircular, backgroundColor: tokens.colorNeutralBackground3, overflow: 'hidden' },
   chartFill: { height: '100%', borderRadius: tokens.borderRadiusCircular, backgroundColor: tokens.colorBrandBackground },
@@ -151,7 +193,20 @@ const useStyles = makeStyles({
   donutSvg: { width: '100%', maxWidth: '220px', display: 'block', margin: '0 auto' },
   donutCaption: { textAlign: 'center', color: tokens.colorNeutralForeground3 },
   donutLegend: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
-  donutButton: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: tokens.spacingHorizontalS, width: '100%', border: `1px solid ${tokens.colorNeutralStroke2}`, borderRadius: tokens.borderRadiusMedium, backgroundColor: tokens.colorNeutralBackground1, padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`, cursor: 'pointer' },
+  donutButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalS,
+    width: '100%',
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
+    cursor: 'pointer',
+    ':hover': { backgroundColor: tokens.colorSubtleBackgroundHover },
+    ':focus-visible': { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: '2px' }
+  },
   legendLeft: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS },
   legendSwatch: { width: '12px', height: '12px', borderRadius: tokens.borderRadiusCircular, flexShrink: 0 },
   legendGreen: { backgroundColor: tokens.colorPaletteGreenForeground1 },
@@ -261,6 +316,14 @@ const DEFAULT_USAGE_CARD_VISIBILITY: Record<UsageCardKey, boolean> = {
   'sites-with-vs-without': true,
   'skill-distribution': true,
   sites: true
+};
+
+type KpiAccent = 'brand' | 'success' | 'warning';
+
+const KPI_ACCENT_STYLES: Record<KpiAccent, { background: string; foreground: string; border: string }> = {
+  brand: { background: tokens.colorBrandBackground2, foreground: tokens.colorBrandForeground1, border: tokens.colorBrandStroke1 },
+  success: { background: tokens.colorStatusSuccessBackground1, foreground: tokens.colorStatusSuccessForeground1, border: tokens.colorStatusSuccessBorder1 },
+  warning: { background: tokens.colorStatusWarningBackground1, foreground: tokens.colorStatusWarningForeground1, border: tokens.colorStatusWarningBorder1 }
 };
 
 export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardProps): React.ReactElement {
@@ -385,8 +448,15 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
     <IdPrefixProvider value="sharepoint-skills-factory-">
       <FluentProvider theme={themeForHost} targetDocument={props.targetDocument} className={styles.root}>
         <div className={styles.header}>
-          <Text size={600} weight="semibold">Awesome SharePoint Skills Factory</Text>
-          <Body1>Create. Discover. Understand.</Body1>
+          <div className={styles.headerRow}>
+            <span className={styles.headerIconTile} aria-hidden="true">
+              <Sparkle24Regular />
+            </span>
+            <div className={styles.headerText}>
+              <Text size={600} weight="semibold">Awesome SharePoint Skills Factory</Text>
+              <Body1 className={styles.headerSubtitle}>Create. Discover. Understand.</Body1>
+            </div>
+          </div>
         </div>
 
         <div className={styles.toolbar}>
@@ -648,18 +718,26 @@ export default function SkillsFactoryDashboard(props: ISkillsFactoryDashboardPro
 
             <div className={styles.kpiGrid}>
               {[
-                ['Total Sites', visibleSites.length, 'Sites in the current view'],
-                ['Total Skills', visibleSkills.length, 'Skills used by those sites'],
-                ['Sites with Skills', visibleSitesWithSkills, 'Sites showing at least one skill'],
-                ['Sites without Skills', visibleSitesWithoutSkills, 'Coverage gaps in the current view'],
-                ['Average Skills / Site', visibleAverageSkillsPerSite.toFixed(1), 'Mean skills per visible site']
-              ].map(([label, value, hint]) => (
-                <Card key={String(label)} className={styles.kpiCard}>
-                  <CardHeader header={<Text weight="semibold">{label}</Text>} />
-                  <Text size={800} weight="semibold" style={{ color: tokens.colorBrandForeground1 }}>{value}</Text>
-                  <Caption1>{hint}</Caption1>
-                </Card>
-              ))}
+                { key: 'total-sites', label: 'Total Sites', value: visibleSites.length, hint: 'Sites in the current view', accent: 'brand' as KpiAccent, icon: <Globe24Regular /> },
+                { key: 'total-skills', label: 'Total Skills', value: visibleSkills.length, hint: 'Skills used by those sites', accent: 'brand' as KpiAccent, icon: <Sparkle24Regular /> },
+                { key: 'sites-with-skills', label: 'Sites with Skills', value: visibleSitesWithSkills, hint: 'Sites showing at least one skill', accent: 'success' as KpiAccent, icon: <CheckmarkCircle24Regular /> },
+                { key: 'sites-without-skills', label: 'Sites without Skills', value: visibleSitesWithoutSkills, hint: 'Coverage gaps in the current view', accent: 'warning' as KpiAccent, icon: <Warning24Regular /> },
+                { key: 'average-skills', label: 'Average Skills / Site', value: visibleAverageSkillsPerSite.toFixed(1), hint: 'Mean skills per visible site', accent: 'brand' as KpiAccent, icon: <ArrowTrending24Regular /> }
+              ].map((kpi) => {
+                const accentStyle = KPI_ACCENT_STYLES[kpi.accent];
+                return (
+                  <Card key={kpi.key} className={styles.kpiCard} style={{ borderLeft: `3px solid ${accentStyle.border}` }}>
+                    <div className={styles.kpiHeaderRow}>
+                      <span className={styles.kpiIconTile} style={{ backgroundColor: accentStyle.background, color: accentStyle.foreground }} aria-hidden="true">
+                        {kpi.icon}
+                      </span>
+                      <Text weight="semibold">{kpi.label}</Text>
+                    </div>
+                    <Text size={800} weight="semibold" style={{ color: accentStyle.foreground }}>{kpi.value}</Text>
+                    <Caption1>{kpi.hint}</Caption1>
+                  </Card>
+                );
+              })}
             </div>
 
             <div className={styles.chartGrid}>

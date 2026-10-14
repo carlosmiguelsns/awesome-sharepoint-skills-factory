@@ -27,7 +27,8 @@ var useStyles = (0, react_components_1.makeStyles)({
         width: '100%',
         '&:hover': {
             transform: 'translateY(-1px)',
-            backgroundColor: react_components_1.tokens.colorNeutralBackground2
+            boxShadow: react_components_1.tokens.shadow4,
+            backgroundColor: react_components_1.tokens.colorSubtleBackgroundHover
         },
         '&:focus-visible': {
             outline: "2px solid ".concat(react_components_1.tokens.colorStrokeFocus2),
@@ -35,7 +36,13 @@ var useStyles = (0, react_components_1.makeStyles)({
         }
     },
     rowTop: {
-        backgroundColor: react_components_1.tokens.colorBrandBackground2
+        backgroundColor: react_components_1.tokens.colorBrandBackground2,
+        border: "1px solid ".concat(react_components_1.tokens.colorBrandStroke2),
+        '&:hover': {
+            transform: 'translateY(-1px)',
+            boxShadow: react_components_1.tokens.shadow4,
+            backgroundColor: react_components_1.tokens.colorBrandBackground2Hover
+        }
     },
     iconWrap: {
         width: '36px',

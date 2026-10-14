@@ -28,7 +28,8 @@ const useStyles = makeStyles({
     width: '100%',
     '&:hover': {
       transform: 'translateY(-1px)',
-      backgroundColor: tokens.colorNeutralBackground2
+      boxShadow: tokens.shadow4,
+      backgroundColor: tokens.colorSubtleBackgroundHover
     },
     '&:focus-visible': {
       outline: `2px solid ${tokens.colorStrokeFocus2}`,
@@ -36,7 +37,13 @@ const useStyles = makeStyles({
     }
   },
   rowTop: {
-    backgroundColor: tokens.colorBrandBackground2
+    backgroundColor: tokens.colorBrandBackground2,
+    border: `1px solid ${tokens.colorBrandStroke2}`,
+    '&:hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: tokens.shadow4,
+      backgroundColor: tokens.colorBrandBackground2Hover
+    }
   },
   iconWrap: {
     width: '36px',

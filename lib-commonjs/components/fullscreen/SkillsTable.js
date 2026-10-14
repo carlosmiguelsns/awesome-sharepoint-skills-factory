@@ -10,8 +10,14 @@ var useStyles = (0, react_components_1.makeStyles)({
     grid: {
         width: '100%'
     },
+    headerRow: {
+        backgroundColor: react_components_1.tokens.colorNeutralBackground2
+    },
     row: {
-        cursor: 'pointer'
+        cursor: 'pointer',
+        ':hover': {
+            backgroundColor: react_components_1.tokens.colorSubtleBackgroundHover
+        }
     },
     skillName: {
         display: 'flex',
@@ -106,14 +112,14 @@ function SkillsTable(props) {
         (0, react_components_1.createTableColumn)({
             columnId: 'sites',
             renderHeaderCell: function () { return 'Sites'; },
-            renderCell: function (skill) { return (React.createElement(react_components_1.Badge, { appearance: "outline" },
+            renderCell: function (skill) { return (React.createElement(react_components_1.Badge, { appearance: "outline", color: "informative" },
                 skill.siteIds.length,
                 " ",
                 skill.siteIds.length === 1 ? 'site' : 'sites')); }
         })
     ]; }, [getModifiedByName, getOwnerName, sortHeaderButton, styles.skillName]);
     return (React.createElement(react_components_1.DataGrid, { className: styles.grid, items: sortedSkills, columns: columns, getRowId: function (skill) { return skill.id; }, resizableColumns: true, columnSizingOptions: SKILLS_TABLE_COLUMN_SIZING_OPTIONS },
-        React.createElement(react_components_1.DataGridHeader, null,
+        React.createElement(react_components_1.DataGridHeader, { className: styles.headerRow },
             React.createElement(react_components_1.DataGridRow, null, function (_a) {
                 var renderHeaderCell = _a.renderHeaderCell;
                 return React.createElement(react_components_1.DataGridHeaderCell, null, renderHeaderCell());

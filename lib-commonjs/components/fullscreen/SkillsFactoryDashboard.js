@@ -12,6 +12,20 @@ var SkillsTable_1 = tslib_1.__importDefault(require("./SkillsTable"));
 var useStyles = (0, react_components_1.makeStyles)({
     root: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalM, padding: react_components_1.tokens.spacingHorizontalM },
     header: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXS },
+    headerRow: { display: 'flex', alignItems: 'center', gap: react_components_1.tokens.spacingHorizontalM },
+    headerIconTile: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '40px',
+        height: '40px',
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        backgroundColor: react_components_1.tokens.colorBrandBackground2,
+        color: react_components_1.tokens.colorBrandForeground1,
+        flexShrink: 0
+    },
+    headerText: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS },
+    headerSubtitle: { color: react_components_1.tokens.colorNeutralForeground3 },
     toolbar: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'center', justifyContent: 'space-between' },
     toolbarActions: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'center' },
     searchBar: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'end' },
@@ -108,11 +122,34 @@ var useStyles = (0, react_components_1.makeStyles)({
     filterSummary: { display: 'flex', flexWrap: 'wrap', gap: react_components_1.tokens.spacingHorizontalXS, alignItems: 'center' },
     compactStatCard: { display: 'inline-flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXXS, minHeight: '92px', width: 'fit-content', minWidth: '180px', padding: react_components_1.tokens.spacingVerticalM },
     kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: react_components_1.tokens.spacingHorizontalM },
-    kpiCard: { minHeight: '104px' },
+    kpiCard: { minHeight: '104px', boxShadow: react_components_1.tokens.shadow2 },
+    kpiHeaderRow: { display: 'flex', alignItems: 'center', gap: react_components_1.tokens.spacingHorizontalS, marginBottom: react_components_1.tokens.spacingVerticalXXS },
+    kpiIconTile: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '28px',
+        height: '28px',
+        borderRadius: react_components_1.tokens.borderRadiusCircular,
+        flexShrink: 0
+    },
     chartGrid: { display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'stretch', overflowX: 'auto' },
     chartCard: { flex: '1 1 0', minWidth: '340px', minHeight: '100%', overflowY: 'visible' },
-    chartList: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
-    chartItem: { border: 'none', background: 'transparent', padding: 0, textAlign: 'left', width: '100%', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXS },
+    chartList: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalXS },
+    chartItem: {
+        border: 'none',
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        background: 'transparent',
+        padding: react_components_1.tokens.spacingVerticalXS,
+        textAlign: 'left',
+        width: '100%',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: react_components_1.tokens.spacingVerticalXS,
+        ':hover': { backgroundColor: react_components_1.tokens.colorSubtleBackgroundHover },
+        ':focus-visible': { outline: "2px solid ".concat(react_components_1.tokens.colorStrokeFocus2), outlineOffset: '2px' }
+    },
     chartItemHeader: { display: 'flex', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS, alignItems: 'baseline' },
     chartTrack: { height: '10px', borderRadius: react_components_1.tokens.borderRadiusCircular, backgroundColor: react_components_1.tokens.colorNeutralBackground3, overflow: 'hidden' },
     chartFill: { height: '100%', borderRadius: react_components_1.tokens.borderRadiusCircular, backgroundColor: react_components_1.tokens.colorBrandBackground },
@@ -121,7 +158,20 @@ var useStyles = (0, react_components_1.makeStyles)({
     donutSvg: { width: '100%', maxWidth: '220px', display: 'block', margin: '0 auto' },
     donutCaption: { textAlign: 'center', color: react_components_1.tokens.colorNeutralForeground3 },
     donutLegend: { display: 'flex', flexDirection: 'column', gap: react_components_1.tokens.spacingVerticalS },
-    donutButton: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: react_components_1.tokens.spacingHorizontalS, width: '100%', border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2), borderRadius: react_components_1.tokens.borderRadiusMedium, backgroundColor: react_components_1.tokens.colorNeutralBackground1, padding: "".concat(react_components_1.tokens.spacingVerticalS, " ").concat(react_components_1.tokens.spacingHorizontalS), cursor: 'pointer' },
+    donutButton: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: react_components_1.tokens.spacingHorizontalS,
+        width: '100%',
+        border: "1px solid ".concat(react_components_1.tokens.colorNeutralStroke2),
+        borderRadius: react_components_1.tokens.borderRadiusMedium,
+        backgroundColor: react_components_1.tokens.colorNeutralBackground1,
+        padding: "".concat(react_components_1.tokens.spacingVerticalS, " ").concat(react_components_1.tokens.spacingHorizontalS),
+        cursor: 'pointer',
+        ':hover': { backgroundColor: react_components_1.tokens.colorSubtleBackgroundHover },
+        ':focus-visible': { outline: "2px solid ".concat(react_components_1.tokens.colorStrokeFocus2), outlineOffset: '2px' }
+    },
     legendLeft: { display: 'flex', alignItems: 'center', gap: react_components_1.tokens.spacingHorizontalS },
     legendSwatch: { width: '12px', height: '12px', borderRadius: react_components_1.tokens.borderRadiusCircular, flexShrink: 0 },
     legendGreen: { backgroundColor: react_components_1.tokens.colorPaletteGreenForeground1 },
@@ -196,6 +246,11 @@ var DEFAULT_USAGE_CARD_VISIBILITY = {
     'sites-with-vs-without': true,
     'skill-distribution': true,
     sites: true
+};
+var KPI_ACCENT_STYLES = {
+    brand: { background: react_components_1.tokens.colorBrandBackground2, foreground: react_components_1.tokens.colorBrandForeground1, border: react_components_1.tokens.colorBrandStroke1 },
+    success: { background: react_components_1.tokens.colorStatusSuccessBackground1, foreground: react_components_1.tokens.colorStatusSuccessForeground1, border: react_components_1.tokens.colorStatusSuccessBorder1 },
+    warning: { background: react_components_1.tokens.colorStatusWarningBackground1, foreground: react_components_1.tokens.colorStatusWarningForeground1, border: react_components_1.tokens.colorStatusWarningBorder1 }
 };
 function SkillsFactoryDashboard(props) {
     var _a, _b, _c;
@@ -325,8 +380,12 @@ function SkillsFactoryDashboard(props) {
     return (React.createElement(react_components_1.IdPrefixProvider, { value: "sharepoint-skills-factory-" },
         React.createElement(react_components_1.FluentProvider, { theme: themeForHost, targetDocument: props.targetDocument, className: styles.root },
             React.createElement("div", { className: styles.header },
-                React.createElement(react_components_1.Text, { size: 600, weight: "semibold" }, "Awesome SharePoint Skills Factory"),
-                React.createElement(react_components_1.Body1, null, "Create. Discover. Understand.")),
+                React.createElement("div", { className: styles.headerRow },
+                    React.createElement("span", { className: styles.headerIconTile, "aria-hidden": "true" },
+                        React.createElement(react_icons_1.Sparkle24Regular, null)),
+                    React.createElement("div", { className: styles.headerText },
+                        React.createElement(react_components_1.Text, { size: 600, weight: "semibold" }, "Awesome SharePoint Skills Factory"),
+                        React.createElement(react_components_1.Body1, { className: styles.headerSubtitle }, "Create. Discover. Understand.")))),
             React.createElement("div", { className: styles.toolbar },
                 React.createElement(react_components_1.TabList, { selectedValue: props.activeTab, onTabSelect: function (_, data) { return props.onTabChange(data.value); } },
                     React.createElement(react_components_1.Tab, { value: "all-skills" }, "All Skills"),
@@ -464,17 +523,19 @@ function SkillsFactoryDashboard(props) {
                             React.createElement(react_components_1.Button, { className: styles.filterPanelClose, appearance: "subtle", icon: React.createElement(react_icons_1.Dismiss24Regular, null), "aria-label": "Close create skill", disabled: createSkillSubmitting, onClick: function () { return setCreateSkillOpen(false); } })),
                         React.createElement(CreateSkillForm_1.default, { sites: props.sites, onCreateSkill: props.onCreateSkill, onActivateAgentAssetsFeature: props.onActivateAgentAssetsFeature, onCreated: function () { return setCreateSkillOpen(false); }, onSubmittingChange: setCreateSkillSubmitting }))),
                 React.createElement("div", { className: styles.kpiGrid }, [
-                    ['Total Sites', visibleSites.length, 'Sites in the current view'],
-                    ['Total Skills', visibleSkills.length, 'Skills used by those sites'],
-                    ['Sites with Skills', visibleSitesWithSkills, 'Sites showing at least one skill'],
-                    ['Sites without Skills', visibleSitesWithoutSkills, 'Coverage gaps in the current view'],
-                    ['Average Skills / Site', visibleAverageSkillsPerSite.toFixed(1), 'Mean skills per visible site']
-                ].map(function (_a) {
-                    var label = _a[0], value = _a[1], hint = _a[2];
-                    return (React.createElement(react_components_1.Card, { key: String(label), className: styles.kpiCard },
-                        React.createElement(react_components_1.CardHeader, { header: React.createElement(react_components_1.Text, { weight: "semibold" }, label) }),
-                        React.createElement(react_components_1.Text, { size: 800, weight: "semibold", style: { color: react_components_1.tokens.colorBrandForeground1 } }, value),
-                        React.createElement(react_components_1.Caption1, null, hint)));
+                    { key: 'total-sites', label: 'Total Sites', value: visibleSites.length, hint: 'Sites in the current view', accent: 'brand', icon: React.createElement(react_icons_1.Globe24Regular, null) },
+                    { key: 'total-skills', label: 'Total Skills', value: visibleSkills.length, hint: 'Skills used by those sites', accent: 'brand', icon: React.createElement(react_icons_1.Sparkle24Regular, null) },
+                    { key: 'sites-with-skills', label: 'Sites with Skills', value: visibleSitesWithSkills, hint: 'Sites showing at least one skill', accent: 'success', icon: React.createElement(react_icons_1.CheckmarkCircle24Regular, null) },
+                    { key: 'sites-without-skills', label: 'Sites without Skills', value: visibleSitesWithoutSkills, hint: 'Coverage gaps in the current view', accent: 'warning', icon: React.createElement(react_icons_1.Warning24Regular, null) },
+                    { key: 'average-skills', label: 'Average Skills / Site', value: visibleAverageSkillsPerSite.toFixed(1), hint: 'Mean skills per visible site', accent: 'brand', icon: React.createElement(react_icons_1.ArrowTrending24Regular, null) }
+                ].map(function (kpi) {
+                    var accentStyle = KPI_ACCENT_STYLES[kpi.accent];
+                    return (React.createElement(react_components_1.Card, { key: kpi.key, className: styles.kpiCard, style: { borderLeft: "3px solid ".concat(accentStyle.border) } },
+                        React.createElement("div", { className: styles.kpiHeaderRow },
+                            React.createElement("span", { className: styles.kpiIconTile, style: { backgroundColor: accentStyle.background, color: accentStyle.foreground }, "aria-hidden": "true" }, kpi.icon),
+                            React.createElement(react_components_1.Text, { weight: "semibold" }, kpi.label)),
+                        React.createElement(react_components_1.Text, { size: 800, weight: "semibold", style: { color: accentStyle.foreground } }, kpi.value),
+                        React.createElement(react_components_1.Caption1, null, kpi.hint)));
                 })),
                 React.createElement("div", { className: styles.chartGrid }, usageCardOrder.map(function (cardKey) {
                     if (!usageCardVisibility[cardKey]) {

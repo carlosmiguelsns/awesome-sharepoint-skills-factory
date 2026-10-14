@@ -27,8 +27,14 @@ const useStyles = makeStyles({
   grid: {
     width: '100%'
   },
+  headerRow: {
+    backgroundColor: tokens.colorNeutralBackground2
+  },
   row: {
-    cursor: 'pointer'
+    cursor: 'pointer',
+    ':hover': {
+      backgroundColor: tokens.colorSubtleBackgroundHover
+    }
   },
   skillName: {
     display: 'flex',
@@ -169,7 +175,7 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
         columnId: 'sites',
         renderHeaderCell: () => 'Sites',
         renderCell: (skill: Skill) => (
-          <Badge appearance="outline">
+          <Badge appearance="outline" color="informative">
             {skill.siteIds.length} {skill.siteIds.length === 1 ? 'site' : 'sites'}
           </Badge>
         )
@@ -187,7 +193,7 @@ export default function SkillsTable(props: ISkillsTableProps): React.ReactElemen
       resizableColumns
       columnSizingOptions={SKILLS_TABLE_COLUMN_SIZING_OPTIONS}
     >
-      <DataGridHeader>
+      <DataGridHeader className={styles.headerRow}>
         <DataGridRow>{({ renderHeaderCell }) => <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>}</DataGridRow>
       </DataGridHeader>
       <DataGridBody<Skill>>
